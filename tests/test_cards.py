@@ -10,7 +10,7 @@ def test_make_deck_ordered(request):
     (fix_rseed_zero(), fix_deck_rseed_zero())
 ])
 def test_make_deck_unordered1(request, seed, ex):
-    assert make_deck_unordered(seed) == ex
+    assert make_deck_unordered(seed) == ex && __len__(Rank) * __len__(Suit) == DECK_SIZE
 
 @pytest.mark.parameterize("seed,ex" [
     (fix_deck_alphabetical_52(), fix_deck_rseed_zero())
@@ -31,7 +31,7 @@ def test_compare(request, a, b, ex):
 
 @pytest.mark.parameterize("raw,ex" [
     ("fix_hand_one_card_raw", "fix_hand_one_card_tups"),
-    ("fix_hand_pair_identical_raw", "fix_hand_pair_identical_tups"), # In blackjack this is illegal but I believe defining such questionably outside the scope of this function.
+    ("fix_hand_pair_identical_raw", "fix_hand_pair_identical_tups"), # In blackjack this is illegal but I believe defining such logic is curiously outside the scope of the function.
     ("fix_hand_different_suit_raw", "fix_hand_different_suit_tups"),
     ("fix_hand_pair_equal_low_raw", "fix_hand_pair_equal_low_tups"),
     ("fix_hand_alphabetical_52_raw", "fix_deck_alpabetical_52"),
@@ -42,7 +42,7 @@ def test_compare(request, a, b, ex):
     ("fix_hand_empty_invalid_interleaved", "fix_hand_empty_tup"),
 ])
 def test_parse_hand(request, raw, ex):
-    return parse_hand(val) == ex
+    return parse_hand(raw) == ex
 
 @pytest.mark.parameterize("h1,h2,ex", [
     ("fix_hand_one_card_tups", "fix_hand_one_card_tups", Ordinal.EQ),
@@ -56,7 +56,7 @@ def test_compare_hand(request, h1, h2, ex):
     ([], "fix_hand_one_card_tups", "fix_hand_one_card_tups", []),
     ([], "fix_hand_pair_different_tups", "fix_hand_one_card_tups", parse_hand("AD")),
     ("fix_hand_one_card_tups", parse_hand("AD"), "fix_hand_pair_different_tups", [])
-    # there's also taking from an empty deck but I prefer to leave that undefined behavior.
+    # there's also taking from an empty deck but I prefer to leave that as undefined behavior.
 ])
 def test_take_card(request, hand, deck, hex, dex):
     assert hand == hex
