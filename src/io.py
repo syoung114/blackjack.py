@@ -34,34 +34,36 @@ class Constraint():
 
 @singledispatch
 def input_require(
+    dtype,
+    prompt : str,
+    fail_prompt : str,
+    reader : Callable[..., str],
+    output : Callable[[str], None],
+    pred=lambda x: True
+):
+    output(prompt)
+    while True:
+        usr = reader()
+        try:
+            result = dtype(usr)
+            if pred(result):
+                return result
+        except ValueError:
+            output(fail_prompt)
+
+@input_require.register(Constraint)
+def _(
     constraint,
     prompt : str,
     fail_prompt : str,
     reader : Callable[..., str],
     output : Callable[[str], None]
 ):
-    output(prompt)
-    while True:
-        usr = reader()
-        try:
-            result = constraint.dtype(usr)
-            if constraint.pred(result):
-                return result
-        except ValueError:
-            output(fail_prompt)
-
-@input_require.register(Any)
-def _(
-    dtype,
-    prompt : str,
-    fail_prompt : str,
-    reader : Callable[..., str],
-    output : Callable[[str], None]
-):
     return input_require(
-        Constraint(dtype),
+        constraint.dtype,
         prompt,
         fail_prompt,
         reader,
-        output
+        output,
+        pred=constraint.pred
     )

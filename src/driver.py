@@ -10,7 +10,8 @@ from src import io
 
 from src.cards import Hand, Deck
 from src.blackjack import PayoutOrd
-from src.StringProvider import StringProvider
+
+from src.strings.StringProvider import StringProvider
 
 def shuffle_deck():
     def _epoch_time_ms():

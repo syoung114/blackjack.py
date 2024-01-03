@@ -1,4 +1,4 @@
-from . import StringProvider
+from .StringProvider import StringProvider
 
 class EnglishStrings(StringProvider):
     def __init__(self):
