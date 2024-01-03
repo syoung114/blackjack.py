@@ -1,10 +1,11 @@
 from typing import List
 from enum import Enum
 
-from .exception import StupidProgrammerException
-from . import constants
-from . import cards
-from cards import Hand, Deck, Ordinal
+from src import constants
+from src import cards
+
+from src.cards import Hand, Deck, Ordinal
+from src.exception.StupidProgrammerException import StupidProgrammerException
 
 class PayoutOrd(Enum):
     ONE_ONE = 1,
@@ -65,7 +66,7 @@ def compare(player : Hand, dealer : Hand, bet : int, payout_ord : PayoutOrd=Payo
             raise StupidProgrammerException("Missing pattern match in blackjack.compare()")
 
 def is_bust(hand : Hand) -> bool:
-    return hand > constants.MAX_HAND_VALUE
+    return cards.hand_value(hand) > constants.MAX_HAND_VALUE
 
 def is_max(hand : Hand) -> bool:
     return cards.hand_value(hand) == constants.MAX_HAND_VALUE
@@ -82,9 +83,9 @@ def is_natural(hand: Hand) -> bool:
 def is_insurable(hand : Hand) -> bool:
     return hand[0] == cards.Rank.ACE
 
-def ins_make_side_bet(bet):
+def insurance_make_side_bet(bet) -> int:
     # TODO allow flexible adjusting depending on casino rules
-    return bet / 2
+    return round(bet / 2)
 
 def insure(dealer : Hand, side_bet : int):
     if is_natural(dealer): # whereas a previous check might have observed just ace, this function observes entire hand
@@ -92,8 +93,8 @@ def insure(dealer : Hand, side_bet : int):
     else:
         return False, -payout(PayoutOrd.ONE_ONE, side_bet)
 
-def dealer_play(dealer : Hand, deck : Deck):
+def dealer_play(dealer : Hand, deck : Deck) -> Hand:
     while cards.hand_value(dealer) < constants.DEALER_STOP:
         cards.take_card(dealer, deck)
 
-    return is_bust(dealer), dealer
+    return dealer

@@ -28,6 +28,7 @@ class Constraint():
 
     def equalsOrDiscrete(self, start, end):
         return Constraint(
+            self.dtype,
             lambda x: self.pred(x) and any(x==i for i in range(start, end))
         )
 
