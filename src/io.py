@@ -7,7 +7,7 @@ from typing import Callable, Any
 from functools import singledispatch
 
 class Constraint():
-    def __init__(self, dtype=str, pred=lambda: True):
+    def __init__(self, dtype=str, pred=lambda x: True):
         self.dtype = dtype
         self.pred = pred
 

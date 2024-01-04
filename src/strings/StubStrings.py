@@ -24,7 +24,7 @@ class StubStrings(StringProvider):
 
     @staticmethod
     def initial_hand(player, dealer) -> str:
-        return f"initial_hand {player},{dealer}"
+        return f"initial_hand {player},,,,,,,,,,,,,,{dealer}"
 
     @staticmethod
     def ask_bet() -> str:
@@ -70,19 +70,19 @@ class StubStrings(StringProvider):
 
     @staticmethod
     def input_yes() -> str:
-        return "input_yes"
+        return "yes"
 
     @staticmethod
     def input_no() -> str:
-        return "input_no"
+        return "no"
 
     @staticmethod
     def input_hit() -> str:
-        return "input_hit"
+        return "hit"
 
     @staticmethod
     def input_stay() -> str:
-        return "input_stay"
+        return "stay"
 
 # show methods -- text that shows without requiring further action
 

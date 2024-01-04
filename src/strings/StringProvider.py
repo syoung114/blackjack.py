@@ -11,6 +11,7 @@ class StringProvider(ABC):
 
 # ask methods -- these are prompts given when asking for input
 
+    @abstractmethod
     @staticmethod
     def ask_generic_fail() -> str:
         pass
@@ -105,6 +106,11 @@ class StringProvider(ABC):
     @staticmethod
     @abstractmethod
     def show_hand_status(hand : Hand) -> str:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def show_bust(hand : Hand) -> str:
         pass
 
     def show_keyboard_interrupt(self) -> str:

@@ -1,3 +1,4 @@
+from functools import singledispatch
 from typing import List
 from enum import Enum
 
@@ -6,6 +7,8 @@ from src import cards
 
 from src.cards import Hand, Deck, Ordinal
 from src.exception.StupidProgrammerException import StupidProgrammerException
+
+type Split = List[Hand]
 
 class PayoutOrd(Enum):
     ONE_ONE = 1,
@@ -71,10 +74,13 @@ def is_bust(hand : Hand) -> bool:
 def is_max(hand : Hand) -> bool:
     return cards.hand_value(hand) == constants.MAX_HAND_VALUE
 
-def can_split(hand) -> bool:
+def is_valid_value(hand : Hand) -> bool:
+    return cards.hand_value(hand) < constants.MAX_HAND_VALUE
+
+def can_split(hand : Hand) -> bool:
     return cards.card_rank_ord(hand[0]) == cards.card_rank_ord(hand[1])
 
-def init_split(hand : Hand) -> List[Hand]:
+def init_split(hand : Hand) -> Split:
     return [[card] for card in hand]
 
 def is_natural(hand: Hand) -> bool:
