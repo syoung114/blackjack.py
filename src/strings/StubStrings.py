@@ -24,7 +24,7 @@ class StubStrings(StringProvider):
 
     @staticmethod
     def initial_hand(player, dealer) -> str:
-        return f"initial_hand {player},,,,,,,,,,,,,,{dealer}"
+        return f"initial_hand\nplayer:{player}\ndealer:{dealer}"
 
     @staticmethod
     def ask_bet() -> str:
@@ -97,6 +97,14 @@ class StubStrings(StringProvider):
     @staticmethod
     def show_hand_status(hand : Hand) -> str:
         return f"hand_status {hand}"
+
+    @staticmethod
+    def show_bust(hand: Hand) -> str:
+        return f"show_bust: {hand}"
+
+    @staticmethod
+    def show_bank(bank : int) -> str:
+        return f"${bank}"
 
     #@staticmethod
     #def show_keyboard_interrupt() -> str:

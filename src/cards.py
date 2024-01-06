@@ -18,8 +18,8 @@ class Rank(Enum):
     NINE = (9,9)
     TEN = (10,10)
     JACK = (11,10)
-    KING = (12,10)
-    QUEEN = (13,10)
+    QUEEN = (12,10)
+    KING = (13,10)
 
 class Suit(Enum):
     # In blackjack suits don't have an inherent rank but they need one for enum. I've used alphabetical.
@@ -42,6 +42,11 @@ Hand = List[Card]
 Deck = Deque[Card] # deletions are more important than random access and linear traversal and we are likely using a random order of elements. A deque fits this use case than a list.
 
 def card_rank_ord(card : Card) -> int:
+    """
+    Returns the order of a card within its rank. For an ace, this is one. For a king, this is thirteen.
+
+    Complexity: O(1)
+    """
     return card[0].value[0]
 
 def card_value(card : Card) -> int:
@@ -58,17 +63,16 @@ def hand_value(hand : Hand) -> int:
 
     Complexity: O(n)
     """
-    # could refactor into functools.reduce but it might be less understandable.
+    # could refactor into functools.reduce/sum() but it might be less understandable.
     acc = 0
     for card in hand:
-        rank_ord = card_rank_ord(card)
         val = card_value(card)
 
-        # The second OR operand is for aces logic. If it is an ace and eleven fits into the hand without busting, add eleven else add one
-        if rank_ord != Rank.ACE.value[0] or acc + val <= constants.MAX_HAND_VALUE:
+        # The second OR operand is for aces logic. If it is an ace and eleven fits into the hand without busting, add eleven. If not, the else will add its ordinal value, one.
+        if card[0] != Rank.ACE or acc + val <= constants.MAX_HAND_VALUE:
             acc += val
         else:
-            acc += rank_ord
+            acc += card_rank_ord(card)
 
     return acc
 
@@ -117,6 +121,7 @@ def parse_hand(hs : str, fmt : str=r'([2-9]|10|J|Q|K|A)([CDHS])') -> Hand:
 
     Complexity: O(n), probably
     """
+    # TODO this is bugged. It doesn't convert the strings to the enum literal
     matches = re.findall(fmt, hs)
     return [ Card(r,s) for r,s in matches ]
 

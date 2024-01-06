@@ -1,5 +1,5 @@
 from functools import singledispatch
-from typing import List
+from typing import List, Type
 from enum import Enum
 
 from src import constants
@@ -8,7 +8,7 @@ from src import cards
 from src.cards import Hand, Deck, Ordinal
 from src.exception.StupidProgrammerException import StupidProgrammerException
 
-type Split = List[Hand]
+Split = List[Hand]
 
 class PayoutOrd(Enum):
     ONE_ONE = 1,
@@ -54,7 +54,7 @@ def compare(player : Hand, dealer : Hand, bet : int, payout_ord : PayoutOrd=Payo
     Given two hands, modifies a bet depending on the value comparison.
     """
     if is_bust(player) and is_bust(dealer):
-        # same as Ordinal.EQ
+        # same as case Ordinal.EQ
         return payout(PayoutOrd.PUSH, bet)
 
     result = cards.compare_hand(player, dealer)
@@ -80,8 +80,8 @@ def is_valid_value(hand : Hand) -> bool:
 def can_split(hand : Hand) -> bool:
     return cards.card_rank_ord(hand[0]) == cards.card_rank_ord(hand[1])
 
-def init_split(hand : Hand) -> Split:
-    return [[card] for card in hand]
+def init_split(hand : Hand, deck : Deck) -> Split:
+    return [[card, deck.pop()] for card in hand]
 
 def is_natural(hand: Hand) -> bool:
     return len(hand) == constants.INITIAL_HAND_LEN and is_max(hand)

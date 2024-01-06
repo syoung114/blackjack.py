@@ -4,7 +4,7 @@ Relatively pure logic for external interaction, including with that of the reade
 """
 
 from typing import Callable, Any
-from functools import singledispatch
+from functools import partial, singledispatch
 
 class Constraint():
     def __init__(self, dtype=str, pred=lambda x: True):
@@ -17,19 +17,22 @@ class Constraint():
     def within(self, lower, upper):
         return Constraint(
             self.dtype,
-            lambda x: self.pred(x) and lower <= x <= upper
+            self.pred and \
+                partial(
+                    lambda lower, upper, x: lower <= x <= upper,
+                    lower,
+                    upper
+                )
         )
 
-    def equalsOr(self, *vals):
+    def equalsAny(self, *vals):
         return Constraint(
             self.dtype,
-            lambda x: self.pred(x) and any(x==val for val in vals)
-        )
-
-    def equalsOrDiscrete(self, start, end):
-        return Constraint(
-            self.dtype,
-            lambda x: self.pred(x) and any(x==i for i in range(start, end))
+            self.pred and \
+                partial(
+                    lambda vals,x: any(x==val for val in vals),
+                    vals
+                )
         )
 
 @singledispatch
@@ -49,7 +52,8 @@ def input_require(
             if pred(result):
                 return result
         except ValueError:
-            output(fail_prompt)
+            pass
+        output(fail_prompt)
 
 @input_require.register(Constraint)
 def _(
