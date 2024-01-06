@@ -2,11 +2,11 @@ from functools import singledispatch
 from typing import List, Type
 from enum import Enum
 
-from src import constants
-from src import cards
+from blackjack import constants
+from blackjack import cards
 
-from src.cards import Hand, Deck, Ordinal
-from src.exception.StupidProgrammerException import StupidProgrammerException
+from blackjack.cards import Hand, Deck, Ordinal
+from blackjack.exception.StupidProgrammerException import StupidProgrammerException
 
 Split = List[Hand]
 

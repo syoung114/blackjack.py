@@ -1,19 +1,17 @@
 import threading
 import time
 import random
-import copy
 
 from enum import Enum
-from typing import Callable, Optional, Union
+from typing import Callable, Union
 from dataclasses import dataclass
 
-from src import blackjack, cards, io
+from blackjack import rules, cards, io
 
-from src.cards import Hand, Deck
-from src.blackjack import PayoutOrd, Split
-from src.exception.StupidProgrammerException import StupidProgrammerException
-
-from src.strings.StringProvider import StringProvider
+from blackjack.cards import Hand, Deck
+from blackjack.rules import PayoutOrd, Split
+from blackjack.exception.StupidProgrammerException import StupidProgrammerException
+from blackjack.strings.StringProvider import StringProvider
 
 class GameStage(Enum):
     ASK_BET = 0
@@ -48,7 +46,7 @@ def driver_io(
     writer : Callable[[str], None] = print
 ):
     """
-    Sort of like main() or a blackjack.loop. It's the highest level driver of program logic and it creates the I/O side effects concerning user input and display.
+    Sort of like main() or a rules.loop. It's the highest level driver of program logic and it creates the I/O side effects concerning user input and display.
     """
 
     def input_require(dtype, prompt, prompt_fail):
@@ -86,8 +84,8 @@ def driver_io(
         return do_insurance == strings.input_yes()
 
     def handle_init_hand(deck : Deck):
-        player = blackjack.init_hand(deck)
-        dealer = blackjack.init_hand(deck)
+        player = rules.init_hand(deck)
+        dealer = rules.init_hand(deck)
         writer(
             strings.initial_hand(player, dealer)
         )
@@ -95,8 +93,8 @@ def driver_io(
 
     def handle_insurance(dealer : Hand, bet : int):
         ins_status = False
-        side_bet = blackjack.insurance_make_side_bet(bet)
-        ins_status, side_bet_winnings = blackjack.insure(dealer, side_bet)
+        side_bet = rules.insurance_make_side_bet(bet)
+        ins_status, side_bet_winnings = rules.insure(dealer, side_bet)
         if ins_status:
             writer(strings.show_insurance_success())
         else:
@@ -105,7 +103,7 @@ def driver_io(
 
     def transition_logic(data : GameState):
         """
-        Given a GameStage and related data, returns the updated data according to blackjack.ckjack logic and user input. Implemented as a state machine/pattern matching.
+        Given a GameStage and related data, returns the updated data according to blackjack logic and user input. Implemented as a state machine/pattern matching.
 
         Impure, but is wrappable for pure interface
 
@@ -124,14 +122,14 @@ def driver_io(
                 # deal the player and dealer. modifies the deck via side effect in the process.
                 new_player, new_dealer = handle_init_hand(data.deck)
 
-                if blackjack.is_natural(new_player):
-                    winnings = blackjack.compare(new_player, new_dealer, data.bet, payout_ord=PayoutOrd.THREE_TWO)
+                if rules.is_natural(new_player):
+                    winnings = rules.compare(new_player, new_dealer, data.bet, payout_ord=PayoutOrd.THREE_TWO)
 
                     data.bank += winnings
                     data.stage = GameStage.ASK_BET
 
                 # check and handle insurance
-                elif blackjack.is_insurable(new_dealer) and ask_want_insurance():
+                elif rules.is_insurable(new_dealer) and ask_want_insurance():
                     ins_success, side_bet_payout = handle_insurance(new_dealer, data.bet)
 
                     data.player = new_player
@@ -146,9 +144,9 @@ def driver_io(
                     data.stage = GameStage.ASK_SPLIT
     
             case GameStage.ASK_SPLIT:
-                if blackjack.can_split(data.player) and ask_want_split():
+                if rules.can_split(data.player) and ask_want_split():
 
-                    data.player = blackjack.init_split(data.player, new_deck)
+                    data.player = rules.init_split(data.player, data.deck)
                     data.stage = GameStage.PLAYER_ACTIONS
 
                 else:
@@ -183,7 +181,7 @@ def driver_io(
                 if ask_hit():
                     cards.take_card(current_hand, data.deck)
 
-                    if blackjack.is_bust(current_hand):
+                    if rules.is_bust(current_hand):
                         writer(strings.show_bust(current_hand))
                         split_completion()
                     else:
@@ -193,13 +191,13 @@ def driver_io(
                     split_completion()
 
             case GameStage.PLAYER_DONE:
-                blackjack.dealer_play(data.dealer, data.deck)
+                rules.dealer_play(data.dealer, data.deck)
 
                 writer(strings.show_hand_status(data.dealer))
                 data.stage = GameStage.COMPLETE
 
             case GameStage.COMPLETE:
-                new_bank = sum([blackjack.compare(hand, data.dealer, data.bet) for hand in data.player_completed])
+                new_bank = sum([rules.compare(hand, data.dealer, data.bet) for hand in data.player_completed])
                 writer(strings.show_bank(new_bank))
 
                 data.bank=data.bank + new_bank
@@ -222,7 +220,3 @@ def driver_io(
 
     except KeyboardInterrupt:
         writer(strings.show_keyboard_interrupt())
-
-from threading import Event
-from src.strings.StubStrings import StubStrings
-driver_io(Event(), StubStrings())

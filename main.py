@@ -1,5 +1,8 @@
 def main():
-    print("test")
+    from threading import Event
+    from blackjack.strings.StubStrings import StubStrings
+    import blackjack.driver as driver
+    driver.driver_io(Event(), StubStrings())
 
 if __name__ == "__main__":
     #import argparse

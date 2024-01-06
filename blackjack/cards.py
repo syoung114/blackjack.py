@@ -1,9 +1,9 @@
-from typing import NamedTuple, List, Deque, Type
+from typing import NamedTuple, List, Deque
 from collections import deque
 from enum import Enum
-from random import Random, sample
+from random import Random
 import re
-from . import constants
+from blackjack import constants
 
 class Rank(Enum):
     # We can keep track of ordinal and card value using tuple.
