@@ -3,7 +3,7 @@ import time
 import random
 
 from enum import Enum
-from typing import Callable, Union
+from typing import Callable, Union, Optional
 from dataclasses import dataclass, fields
 
 from blackjack import rules, cards, io
@@ -27,12 +27,17 @@ class GameState:
     stage : GameStage
     deck : Deck
     bank : int
-    bet : int
-    dealer : Hand
-    player : Union[Hand, Split]# TODO decouple for multiple players
-    player_completed : Split
+    bet : Optional[int]
+    dealer : Optional[Hand]
+    player : Optional[Union[Hand, Split]] # TODO decouple for multiple players
+    player_completed : Optional[Split]
 
 def make_deck_epoch():
+    """
+    Makes a 52 random deck seeded by epoch (POSIX time) in milliseconds.
+
+    Impure, obviously
+    """
     def _epoch_time_ms():
         return round(time.time() * 1000)
 
@@ -44,43 +49,27 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
     """
     Given a GameStage and related data, returns the updated data according to blackjack logic and user input. Implemented as a state machine/pattern matching.
 
-    Impure, but is wrappable for pure interface
+    Impure, but you can wrap it in a function that encapsulates state changes and returns a new GameState
 
     @arg data A GameState representing a snapshot of the working state
     """
     def input_require(dtype, prompt, prompt_fail):
         # The reader and writer do not change so typing it repeatedly is annoying
         return io.input_require(dtype, prompt, prompt_fail, reader, writer)
-
-    def ask_bank() -> int:
-        return input_require(int, strings.ask_bank(), strings.ask_bank_fail())
  
     def ask_bet(bank) -> int:
-        bet_constraint = io.Constraint().require(int).within(0,bank)
+        bet_constraint = io.Constraint().require(int).within(1, bank)
         bet = input_require(bet_constraint, strings.ask_bet(), strings.ask_bet_fail())
         return bet
 
     def ask_hit() -> bool:
-        """
-        @returns true if hit, false if stay.
-        """
-        hs_constraint = io.Constraint().equalsAny(strings.input_hit(), strings.input_stay())
-        do_hs = input_require(hs_constraint, strings.ask_hit_stay(), strings.ask_hit_stay_fail())
-        return do_hs == strings.input_hit()
+        return io.ask_binary(strings.input_hit(), strings.input_stay(), strings.ask_hit_stay(), strings.ask_hit_stay_fail(), reader, writer)
 
     def ask_want_split() -> bool:
-        split_constraint = io.Constraint().require(str).equalsAny(strings.input_yes(), strings.input_no())
-        do_split = input_require(split_constraint, strings.ask_split(), strings.ask_split_fail())
-        return do_split == strings.input_yes()
+        return io.ask_binary(strings.input_yes(), strings.input_no(), strings.ask_split(), strings.ask_split_fail(), reader, writer)
 
     def ask_want_insurance() -> bool:
-        insurance_constraint = io.Constraint().require(str).equalsAny(strings.input_yes(), strings.input_no())
-        do_insurance = input_require(
-            insurance_constraint,
-            strings.ask_insurance(),
-            strings.ask_insurance_fail()
-        )
-        return do_insurance == strings.input_yes()
+        return io.ask_binary(strings.input_yes(), strings.input_no(), strings.ask_insurance(), strings.ask_insurance_fail(), reader, writer)
 
     def handle_init_hand(deck : Deck):
         player = rules.init_hand(deck)
@@ -90,49 +79,48 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
         )
         return player, dealer
 
-    def handle_insurance(dealer : Hand, bet : int):
-        ins_status = False
-        side_bet = rules.insurance_make_side_bet(bet)
-        ins_status, side_bet_winnings = rules.insure(dealer, side_bet)
-        if ins_status:
-            writer(strings.show_insurance_success())
-        else:
-            writer(strings.show_insurance_fail())
-        return ins_status, side_bet_winnings
-
     match data.stage:
         case GameStage.ASK_BET:
-            new_bank = ask_bank()
+            data.bet = ask_bet(data.bank)
 
-            #data.deck = make_deck_epoch()
-            data.bank = new_bank
-            data.bet = ask_bet(new_bank)
+            # in blackjack we take away the bet and the player either wins it back (maybe then some) or they don't get anything.
+            data.bank -= data.bet
+
             data.stage = GameStage.INIT_DEAL
 
         case GameStage.INIT_DEAL:
             # deal the player and dealer. modifies the deck via side effect in the process.
-            new_player, new_dealer = handle_init_hand(data.deck)
+            data.player, data.dealer = handle_init_hand(data.deck)
 
-            if rules.is_natural(new_player):
-                winnings = rules.compare(new_player, new_dealer, data.bet, payout_ord=PayoutOrd.THREE_TWO)
+            # default case where they don't want insurance or the insurance fails. ASK_SPLIT is just the next stage.
+            data.stage = GameStage.ASK_SPLIT
 
-                data.bank += winnings
-                data.stage = GameStage.ASK_BET
+            if rules.is_natural(data.player):
+                writer(strings.show_blackjack())
+
+                data.player_completed = [data.player]
+                data.player = []
+                data.stage = GameStage.PLAYER_DONE # still chance of a push
 
             # check and handle insurance
-            elif rules.is_insurable(new_dealer) and ask_want_insurance():
-                ins_success, side_bet_payout = handle_insurance(new_dealer, data.bet)
+            elif rules.is_insurable(data.dealer) and ask_want_insurance():
 
-                data.player = new_player
-                data.dealer = new_dealer
-                data.bank += side_bet_payout
-                data.stage = GameStage.ASK_BET if ins_success else GameStage.ASK_SPLIT
+                side_bet = rules.insurance_make_side_bet(data.bet)
+                data.bank -= side_bet
 
-            # either not insurable or they don't want insurance, so move on
-            else:
-                data.player = new_player
-                data.dealer = new_dealer
-                data.stage = GameStage.ASK_SPLIT
+                insurance_success, payout = rules.insure(
+                    data.dealer,
+                    side_bet
+                )
+
+                # side_bet_payout is negative for lost bet.
+                data.bank += payout
+
+                if insurance_success:
+                    writer(strings.show_insurance_success())
+                    data.stage = GameStage.COMPLETE # this is intentionally not UPDATE_BANK. UPDATE_BANK compares cards which insurance doesn't do.
+                else:
+                    writer(strings.show_insurance_fail())
 
         case GameStage.ASK_SPLIT:
             if rules.can_split(data.player) and ask_want_split():
@@ -140,12 +128,14 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
                 data.player = rules.init_split(data.player, data.deck)
                 data.stage = GameStage.PLAYER_ACTIONS
 
+                writer(strings.show_hand_status(data.player))
+
             else:
                 data.stage=GameStage.PLAYER_ACTIONS
 
         case GameStage.PLAYER_ACTIONS: # this is more granular than "for split in splits", being every hit/stay prompt. I think being less granular isn't as true to the state machine model
 
-            #is_split = all(isinstance(elem,list) for elem in data.player) # a more naive but faster way is to check if first element is a list (cards are tuples)
+            #is_split = all(isinstance(elem,list) for elem in data.player)
             is_split = isinstance(data.player[0],list)
             current_hand = data.player[len(data.player) - 1] if is_split else data.player
 
@@ -157,6 +147,11 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
                 if rules.is_bust(current_hand):
                     writer(strings.show_bust(current_hand))
                     hand_completed = True
+
+                elif rules.is_max(current_hand):
+                    writer(strings.show_max_hand())
+                    hand_completed = True
+
                 else:
                     writer(strings.show_hand_status(current_hand))
 
@@ -185,12 +180,23 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
         case GameStage.PLAYER_DONE:
             rules.dealer_play(data.dealer, data.deck)
 
-            writer(strings.show_hand_status(data.dealer))
-            data.stage = GameStage.COMPLETE
+            # if the dealer busted then report it.
+            if rules.is_bust(data.dealer):
+                writer(strings.show_bust(data.dealer))
+            else:
+                writer(strings.show_hand_status(data.dealer))
+
+            data.stage = GameStage.UPDATE_BANK
 
         case GameStage.UPDATE_BANK:
 
-            data.bank += sum([rules.compare(hand, data.dealer, data.bet) for hand in data.player_completed])
+            if len(data.player_completed) == 1 and rules.is_natural(data.player_completed[0]):
+                # winning logic specifically for naturals has not yet been applied. The first natural check just said to change stage.
+                data.bank += rules.compare(data.player, data.dealer, data.bet, win_odds=PayoutOrd.THREE_TWO)
+
+            else:
+                data.bank += rules.winnings(data.player_completed, data.dealer, data.bet)
+
             writer(strings.show_bank(data.bank))
 
             data.player_completed = []
@@ -200,7 +206,7 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
 
             for field in fields(data):
                 if field.name not in ['bank', 'deck']:
-                    setattr(data, field, None)
+                    setattr(data, str(field), None)
 
             data.stage = GameStage.ASK_BET
             #data.bank = None
@@ -218,11 +224,16 @@ def driver_io(
     """
     Sort of like main() or a rules.loop. It's the highest level driver of program logic and it creates the I/O side effects concerning user input and display.
     """
+
+    def ask_bank() -> int:
+        return io.input_require(int, strings.ask_bank(), strings.ask_bank_fail(), reader, writer)
+
     try:
-        init_state = GameState(GameStage.ASK_BET, make_deck_epoch(), None, None, None, None, None)
+        init_state = GameState(GameStage.ASK_BET, make_deck_epoch(), ask_bank(), None, None, None, None)
         while not ext_stop_pred.is_set():
-            #if len(current_state.deck) < 26:
-            #    current_state._replace(deck=make_deck_epoch())
+            if len(init_state.deck) <= 13: # this is arbitrary for the moment while other details are realized.
+                init_state.deck = make_deck_epoch()
+                writer(strings.show_shuffling())
             writer(str(init_state.stage))
             transition_logic(init_state, strings, reader, writer)
 

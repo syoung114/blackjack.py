@@ -118,6 +118,21 @@ class StringProvider(ABC):
     def show_bank(bank : int) -> str:
         pass
 
+    @staticmethod
+    @abstractmethod
+    def show_blackjack() -> str:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def show_max_hand() -> str:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def show_shuffling() -> str:
+        pass
+
     def show_keyboard_interrupt(self) -> str:
         # it's safe to assume that this will be the standard library default (as below) or ""
         return "KeyboardInterrupt"

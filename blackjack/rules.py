@@ -1,4 +1,5 @@
-from functools import singledispatch
+import functools
+
 from typing import List, Type
 from enum import Enum
 
@@ -13,8 +14,7 @@ Split = List[Hand]
 class PayoutOrd(Enum):
     ONE_ONE = 1,
     THREE_TWO = 2,
-    TWO_ONE = 3,
-    PUSH = 4
+    TWO_ONE = 3
 
 def payout(ord : PayoutOrd, bet : int) -> int:
     """
@@ -22,15 +22,13 @@ def payout(ord : PayoutOrd, bet : int) -> int:
 
     Complexity: O(1)
     """
-    match ord: # it took 30 years of python development to implement a switch...
-        case PayoutOrd.ONE_ONE: # I know this is redundant but it's for consistency and maintainability. Since this is python we don't care about minimising CPU cycles anyway.
+    match ord:
+        case PayoutOrd.ONE_ONE:
             return bet
         case PayoutOrd.THREE_TWO:
             return round(1.5 * bet)
         case PayoutOrd.TWO_ONE:
             return 2 * bet
-        case PayoutOrd.PUSH:
-            return 0
         case _:
             raise StupidProgrammerException("Missing payout pattern match in blackjack.payout()")
 
@@ -38,7 +36,7 @@ def init_hand(deck : Deck) -> Hand:
     """
     Takes two cards from the deck, starting from the last key.
 
-    Complexity: O(1)
+    Complexity: O(k) for size of initial hand
 
     Impure
     """
@@ -49,24 +47,47 @@ def init_hand(deck : Deck) -> Hand:
 
     return h
 
-def compare(player : Hand, dealer : Hand, bet : int, payout_ord : PayoutOrd=PayoutOrd.ONE_ONE) -> int:
+def compare(player : Hand, dealer : Hand, bet : int, win_odds : PayoutOrd=PayoutOrd.ONE_ONE) -> int:
     """
     Given two hands, modifies a bet depending on the value comparison.
+
+    Complexity: O(n) for number of cards
     """
-    if is_bust(player) and is_bust(dealer):
-        # same as case Ordinal.EQ
-        return payout(PayoutOrd.PUSH, bet)
+    player_bust = is_bust(player)
+    dealer_bust = is_bust(dealer)
+
+    if player_bust and dealer_bust:
+        return bet
+
+    elif player_bust and not dealer_bust:
+        return 0
+
+    elif not player_bust and dealer_bust:
+        return bet + payout(win_odds, bet)
 
     result = cards.compare_hand(player, dealer)
     match result:
         case Ordinal.GT:
-            return payout(payout_ord, bet)
-        case Ordinal.EQ:
-            return payout(PayoutOrd.PUSH, bet)
+            return bet + payout(win_odds, bet)
+        case Ordinal.EQ: # push
+            return bet
         case Ordinal.LT:
-            return -payout(payout_ord, bet)
+            return 0
         case _:
             raise StupidProgrammerException("Missing pattern match in blackjack.compare()")
+
+
+def winnings(hands : Split, dealer : Hand, bet : int) -> int:
+    # naturals are 1:1 on split hands. fortunately this rule is accidentally built in already and nothing has to be done.
+    return functools.reduce(
+        lambda acc,hand: acc + compare(hand, dealer, bet),
+        hands,
+        0
+    )
+
+def is_natural(hand: Hand) -> bool:
+    # this is an indirect check. it works. checking directly through the cards themselves is needlessly harder to do.
+    return len(hand) == constants.INITIAL_HAND_LEN and is_max(hand)
 
 def is_bust(hand : Hand) -> bool:
     return cards.hand_value(hand) > constants.MAX_HAND_VALUE
@@ -74,19 +95,14 @@ def is_bust(hand : Hand) -> bool:
 def is_max(hand : Hand) -> bool:
     return cards.hand_value(hand) == constants.MAX_HAND_VALUE
 
-def is_valid_value(hand : Hand) -> bool:
-    return cards.hand_value(hand) < constants.MAX_HAND_VALUE
-
 def can_split(hand : Hand) -> bool:
     return cards.card_rank_ord(hand[0]) == cards.card_rank_ord(hand[1])
 
 def init_split(hand : Hand, deck : Deck) -> Split:
     return [[card, deck.pop()] for card in hand]
 
-def is_natural(hand: Hand) -> bool:
-    return len(hand) == constants.INITIAL_HAND_LEN and is_max(hand)
-
 def is_insurable(hand : Hand) -> bool:
+    # we can directly access the second card here but it's not shown to user. so this function pretends.
     return hand[0] == cards.Rank.ACE
 
 def insurance_make_side_bet(bet) -> int:
@@ -95,9 +111,9 @@ def insurance_make_side_bet(bet) -> int:
 
 def insure(dealer : Hand, side_bet : int):
     if is_natural(dealer): # whereas a previous check might have observed just ace, this function observes entire hand
-        return True, payout(PayoutOrd.ONE_ONE, side_bet)
+        return True, side_bet + payout(PayoutOrd.TWO_ONE, side_bet)
     else:
-        return False, -payout(PayoutOrd.ONE_ONE, side_bet)
+        return False, 0
 
 def dealer_play(dealer : Hand, deck : Deck) -> Hand:
     while cards.hand_value(dealer) < constants.DEALER_STOP:

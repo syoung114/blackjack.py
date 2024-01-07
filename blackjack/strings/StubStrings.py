@@ -1,6 +1,6 @@
 from .StringProvider import StringProvider
 
-from blackjack.cards import Hand
+from blackjack.cards import Hand, hand_value
 
 class StubStrings(StringProvider):
     """
@@ -24,7 +24,7 @@ class StubStrings(StringProvider):
 
     @staticmethod
     def initial_hand(player, dealer) -> str:
-        return f"initial_hand\nplayer:{player}\ndealer:{dealer}"
+        return f"Player:{StubStrings.show_hand_status(player)}\nDealer:{dealer[1]}"
 
     @staticmethod
     def ask_bet() -> str:
@@ -96,7 +96,7 @@ class StubStrings(StringProvider):
 
     @staticmethod
     def show_hand_status(hand : Hand) -> str:
-        return f"hand_status {hand}"
+        return f"hand_status, val {hand_value(hand)} {hand}"
 
     @staticmethod
     def show_bust(hand: Hand) -> str:
@@ -105,6 +105,18 @@ class StubStrings(StringProvider):
     @staticmethod
     def show_bank(bank : int) -> str:
         return f"${bank}"
+
+    @staticmethod
+    def show_blackjack() -> str:
+        return "blackjack"
+
+    @staticmethod
+    def show_max_hand() -> str:
+        return "MAX HAND 21"
+
+    @staticmethod
+    def show_shuffling() -> str:
+        return "SHUFFLING..."
 
     #@staticmethod
     #def show_keyboard_interrupt() -> str:

@@ -71,3 +71,9 @@ def _(
         output,
         pred=constraint.pred
     )
+
+def ask_binary(input_yes : str, input_no : str, show_normal : str, show_fail : str, reader : Callable[..., str], writer : Callable[[str], None]):
+    constraint = Constraint().equalsAny(input_yes, input_no)
+    do_hs = input_require(constraint, show_normal, show_fail, reader, writer)
+    return do_hs == input_yes
+

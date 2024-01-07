@@ -59,20 +59,22 @@ def card_value(card : Card) -> int:
 
 def hand_value(hand : Hand) -> int:
     """
-    Accumulates the cards in a hand, including ace rules. Does not handle busts. When there is an ace, it adds 11 until there is a bust, and 1 thereafter, no matter if adding 1 is a bust.
+    Accumulates the cards in a hand, including ace rules.
 
     Complexity: O(n)
     """
     # could refactor into functools.reduce/sum() but it might be less understandable.
     acc = 0
-    for card in hand:
-        val = card_value(card)
+    aces_count = 0
 
-        # The second OR operand is for aces logic. If it is an ace and eleven fits into the hand without busting, add eleven. If not, the else will add its ordinal value, one.
-        if card[0] != Rank.ACE or acc + val <= constants.MAX_HAND_VALUE:
-            acc += val
-        else:
-            acc += card_rank_ord(card)
+    for card in hand:
+        acc += card_value(card)
+        if card[0] == Rank.ACE:
+            aces_count += 1
+
+    while acc > constants.MAX_HAND_VALUE and aces_count > 0:
+        acc -= Rank.ACE.value[1] - Rank.ACE.value[0] # TODO I am partial on this. yes it's 11 minus 1 as we want but it seems contrived. I want something more algorithmically elegant.
+        aces_count -= 1
 
     return acc
 
