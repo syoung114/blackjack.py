@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.cards import Hand
+from blackjack.cards import Hand
 
 class StringProvider(ABC):
     """

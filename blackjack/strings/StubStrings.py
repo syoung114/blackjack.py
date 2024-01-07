@@ -1,6 +1,6 @@
 from .StringProvider import StringProvider
 
-from src.cards import Hand
+from blackjack.cards import Hand
 
 class StubStrings(StringProvider):
     """
