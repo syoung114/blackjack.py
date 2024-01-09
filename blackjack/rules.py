@@ -67,12 +67,12 @@ def compare(player : Hand, dealer : Hand, bet : int, win_odds : PayoutOrd=Payout
 
     result = cards.compare_hand(player, dealer)
     match result:
-        case Ordinal.GT:
-            return bet + payout(win_odds, bet)
-        case Ordinal.EQ: # push
+        case Ordinal.EQ:
             return bet
         case Ordinal.LT:
             return 0
+        case Ordinal.GT:
+            return bet + payout(win_odds, bet)
         case _:
             raise StupidProgrammerException("Missing pattern match in blackjack.compare()")
 

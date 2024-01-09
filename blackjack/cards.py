@@ -39,7 +39,7 @@ class Ordinal(Enum):
 
 # Type synonyms
 Hand = List[Card]
-Deck = Deque[Card] # deletions are more important than random access and linear traversal and we are likely using a random order of elements. A deque fits this use case than a list.
+Deck = Deque[Card] # deletions are more important than random access and linear traversal and we are likely using a random order of elements. A deque fits this use case better than a list.
 
 def card_rank_ord(card : Card) -> int:
     """
@@ -91,31 +91,16 @@ def compare(a, b) -> Ordinal:
     else:
         return Ordinal.EQ
 
-def compare_hand(l_hand : Hand, r_hand : Hand) -> Ordinal:
+def compare_hand(left_hand : Hand, right_hand : Hand) -> Ordinal:
     """
     Indicates which hand has the greater cumulative hand value.
 
     Complexity: O(n)
     """
-    l_sum = 0
-    r_sum = 0
-
-    # count in parallel until we reach end of shorter hand
-    for card1,card2 in zip(l_hand,r_hand):
-        l_sum += card_value(card1) 
-        r_sum += card_value(card2) 
-
-    # continue for the larger hand, if lengths not equal
-    if len(l_hand) > len(r_hand):
-        # note that slicing isn't O(1) but it's most intuitive approach. more performant would be indexing through range.
-        for card in l_hand[:len(r_hand)]:
-            l_sum += card_value(card)
-
-    elif len(l_hand) < len(r_hand):
-        for card in r_hand[:len(l_hand)]:
-            r_sum += card_value(card)
-
-    return compare(l_sum, r_sum)
+    return compare(
+        hand_value(left_hand),
+        hand_value(right_hand)
+    )
 
 def parse_hand(hs : str, fmt : str=r'([2-9]|10|J|Q|K|A)([CDHS])') -> Hand:
     """
@@ -123,9 +108,32 @@ def parse_hand(hs : str, fmt : str=r'([2-9]|10|J|Q|K|A)([CDHS])') -> Hand:
 
     Complexity: O(n), probably
     """
+    # TODO these should respect the fmt string.
+    # performance really isn't a concern in this function. you probably shouldn't mention specific cards in blackjack. the motive for this function is to make testing a breeze. the reason this function isn't in tests/ is because there might be a use case (user input) later on where this function is needed.
+    suit_map = {
+        'C' : Suit.CLUB,
+        'D' : Suit.DIAMOND,
+        'H' : Suit.HEART,
+        'S' : Suit.SPADE,
+    }
+    rank_map = {
+        'A' : Rank.ACE,
+        '2' : Rank.TWO,
+        '3' : Rank.THREE,
+        '4' : Rank.FOUR,
+        '5' : Rank.FIVE,
+        '6' : Rank.SIX,
+        '7' : Rank.SEVEN,
+        '8' : Rank.EIGHT,
+        '9' : Rank.NINE,
+        '10' : Rank.TEN,
+        'J' : Rank.JACK,
+        'Q' : Rank.QUEEN,
+        'K' : Rank.KING,
+    }
     # TODO this is bugged. It doesn't convert the strings to the enum literal
     matches = re.findall(fmt, hs)
-    return [ Card(r,s) for r,s in matches ]
+    return [ Card(rank_map[r], suit_map[s]) for r,s in matches ]
 
 def make_deck_ordered() -> Deck:
     """
