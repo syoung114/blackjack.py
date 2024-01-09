@@ -41,100 +41,6 @@ class Ordinal(Enum):
 Hand = List[Card]
 Deck = Deque[Card] # deletions are more important than random access and linear traversal and we are likely using a random order of elements. A deque fits this use case better than a list.
 
-def card_rank_ord(card : Card) -> int:
-    """
-    Returns the order of a card within its rank. For an ace, this is one. For a king, this is thirteen.
-
-    Complexity: O(1)
-    """
-    return card[0].value[0]
-
-def card_value(card : Card) -> int:
-    """
-    Returns the value of a given card.
-
-    Complexity: O(1)
-    """
-    return card[0].value[1]
-
-def hand_value(hand : Hand) -> int:
-    """
-    Accumulates the cards in a hand, including ace rules.
-
-    Complexity: O(n)
-    """
-    # could refactor into functools.reduce/sum() but it might be less understandable.
-    acc = 0
-    aces_count = 0
-
-    for card in hand:
-        acc += card_value(card)
-        if card[0] == Rank.ACE:
-            aces_count += 1
-
-    while acc > constants.MAX_HAND_VALUE and aces_count > 0:
-        acc -= Rank.ACE.value[1] - Rank.ACE.value[0] # TODO I am partial on this. yes it's 11 minus 1 as we want but it seems contrived. I want something more algorithmically elegant.
-        aces_count -= 1
-
-    return acc
-
-def compare(a, b) -> Ordinal:
-    """
-    Returns GT,LT, or EQ for any number.
-
-    Complexity: O(1)
-    """
-    if a > b:
-        return Ordinal.GT
-    elif a < b:
-        return Ordinal.LT
-    else:
-        return Ordinal.EQ
-
-def compare_hand(left_hand : Hand, right_hand : Hand) -> Ordinal:
-    """
-    Indicates which hand has the greater cumulative hand value.
-
-    Complexity: O(n)
-    """
-    return compare(
-        hand_value(left_hand),
-        hand_value(right_hand)
-    )
-
-def parse_hand(hs : str, fmt : str=r'([2-9]|10|J|Q|K|A)([CDHS])') -> Hand:
-    """
-    Converts a string representation into usable format.
-
-    Complexity: O(n), probably
-    """
-    # TODO these should respect the fmt string.
-    # performance really isn't a concern in this function. you probably shouldn't mention specific cards in blackjack. the motive for this function is to make testing a breeze. the reason this function isn't in tests/ is because there might be a use case (user input) later on where this function is needed.
-    suit_map = {
-        'C' : Suit.CLUB,
-        'D' : Suit.DIAMOND,
-        'H' : Suit.HEART,
-        'S' : Suit.SPADE,
-    }
-    rank_map = {
-        'A' : Rank.ACE,
-        '2' : Rank.TWO,
-        '3' : Rank.THREE,
-        '4' : Rank.FOUR,
-        '5' : Rank.FIVE,
-        '6' : Rank.SIX,
-        '7' : Rank.SEVEN,
-        '8' : Rank.EIGHT,
-        '9' : Rank.NINE,
-        '10' : Rank.TEN,
-        'J' : Rank.JACK,
-        'Q' : Rank.QUEEN,
-        'K' : Rank.KING,
-    }
-    # TODO this is bugged. It doesn't convert the strings to the enum literal
-    matches = re.findall(fmt, hs)
-    return [ Card(rank_map[r], suit_map[s]) for r,s in matches ]
-
 def make_deck_ordered() -> Deck:
     """
     Creates a standard deck of cards.
@@ -184,3 +90,102 @@ def take_card(hand : Hand, deck : Deck):
     Impure
     """
     hand.append(deck.pop())
+
+def parse_hand(hs : str, fmt : str=r'([2-9]|10|J|Q|K|A)([CDHS])') -> Hand:
+    """
+    Converts a string representation into usable format.
+
+    Complexity: O(n), probably
+    """
+    # TODO these should respect the fmt string.
+    # performance really isn't a concern in this function. you probably shouldn't mention specific cards in blackjack. the motive for this function is to make testing a breeze. the reason this function isn't in tests/ is because there might be a use case (user input) later on where this function is needed.
+    suit_map = {
+        'C' : Suit.CLUB,
+        'D' : Suit.DIAMOND,
+        'H' : Suit.HEART,
+        'S' : Suit.SPADE,
+    }
+    rank_map = {
+        'A' : Rank.ACE,
+        '2' : Rank.TWO,
+        '3' : Rank.THREE,
+        '4' : Rank.FOUR,
+        '5' : Rank.FIVE,
+        '6' : Rank.SIX,
+        '7' : Rank.SEVEN,
+        '8' : Rank.EIGHT,
+        '9' : Rank.NINE,
+        '10' : Rank.TEN,
+        'J' : Rank.JACK,
+        'Q' : Rank.QUEEN,
+        'K' : Rank.KING,
+    }
+    # TODO this is bugged. It doesn't convert the strings to the enum literal
+    matches = re.findall(fmt, hs)
+    return [ Card(rank_map[r], suit_map[s]) for r,s in matches ]
+
+def card_rank_ord(card : Card) -> int:
+    """
+    Returns the order of a card within its rank. For an ace, this is one. For a king, this is thirteen.
+
+    Complexity: O(1)
+    """
+    return card[0].value[0]
+
+def card_value(card : Card) -> int:
+    """
+    Returns the value of a given card.
+
+    Complexity: O(1)
+    """
+    return card[0].value[1]
+
+def hand_value(hand : Hand) -> int:
+    """
+    Accumulates the cards in a hand, including ace rules.
+
+    Complexity: O(n)
+    """
+    # could refactor into functools.reduce/sum() but it might be less understandable.
+    acc = 0
+    aces_count = 0
+
+    for card in hand:
+        if card[0] == Rank.ACE:
+            aces_count += 1
+        else:
+            acc += card_value(card)
+
+    # count aces...
+    for _ in range(aces_count):
+        if acc + Rank.ACE.value[1] <= constants.MAX_HAND_VALUE:
+            acc += Rank.ACE.value[1]
+        else:
+            acc += Rank.ACE.value[0]
+
+    return acc
+
+def compare(a, b) -> Ordinal:
+    """
+    Returns GT,LT, or EQ for any number.
+
+    Complexity: O(1)
+    """
+    if a > b:
+        return Ordinal.GT
+    elif a < b:
+        return Ordinal.LT
+    else:
+        return Ordinal.EQ
+
+def compare_hand(left_hand : Hand, right_hand : Hand) -> Ordinal:
+    """
+    Indicates which hand has the greater cumulative hand value.
+
+    Complexity: O(n)
+    """
+    return compare(
+        hand_value(left_hand),
+        hand_value(right_hand)
+    )
+
