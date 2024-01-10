@@ -171,7 +171,7 @@ def init_split(hand : Hand, deck : Deck) -> Split:
 
 def is_insurable(hand : Hand) -> bool:
     # we can directly access the second card here but it's not shown to user. so this function pretends.
-    return hand[0] == cards.Rank.ACE
+    return hand[0][0] == cards.Rank.ACE
 
 def insurance_make_side_bet(bet) -> int:
     # TODO allow flexible adjusting depending on casino rules
