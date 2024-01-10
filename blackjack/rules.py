@@ -113,6 +113,9 @@ def bet_hand(player : Hand, dealer : Hand, bet : int, win_odds : PayoutOrd=Payou
 
     Complexity: O(n) for number of cards
     """
+
+    # As you read this function you'll notice an unintuitive call to payout(). That function computes the winnings on top of the original bet. This function encompasses the entire bet logic. A match function within a match function might seem confusing without this context so figured I'd mention it. Don't consider refactoring because the matches aren't the same.
+
     player_bust = is_bust(player)
     dealer_bust = is_bust(dealer)
 
@@ -138,6 +141,11 @@ def bet_hand(player : Hand, dealer : Hand, bet : int, win_odds : PayoutOrd=Payou
 
 
 def winnings(hands : Split, dealer : Hand, bet : int) -> int:
+    """
+    Computes bet winnings per hand split against the dealer.
+
+    Complexity: O(n)
+    """
     # naturals are 1:1 on split hands. fortunately this rule is accidentally built in already and nothing has to be done.
     return functools.reduce(
         lambda acc,hand: acc + bet_hand(hand, dealer, bet),
@@ -175,8 +183,11 @@ def insure(dealer : Hand, side_bet : int):
     else:
         return False, 0
 
-def dealer_play(dealer : Hand, deck : Deck) -> Hand:
-    while hand_value(dealer) < constants.DEALER_STOP:
+def dealer_play(dealer : Hand, deck : Deck):
+    i = len(dealer)
+    while hand_value(dealer) < constants.DEALER_STOP and i <= constants.MAX_HAND_LEN:
         cards.take_card(dealer, deck)
+        i += 1
 
-    return dealer
+    if i > constants.MAX_HAND_LEN:
+        raise StupidProgrammerException("somehow the dealer keeps taking cards. infinite loop prevented.")
