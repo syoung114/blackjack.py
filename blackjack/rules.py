@@ -22,6 +22,10 @@ class PayoutOrd(Enum):
     THREE_TWO = 2,
     TWO_ONE = 3
 
+# /core definitions
+#######################################################################################
+# init hand
+
 def init_hand(deck : Deck) -> Hand:
     """
     Takes two cards from the deck, starting from the last key.
@@ -37,6 +41,10 @@ def init_hand(deck : Deck) -> Hand:
         cards.take_card(h, deck)
 
     return h
+
+# /init hand
+#######################################################################################
+# payouts
 
 def hand_value(hand : Hand) -> int:
     """
@@ -152,6 +160,9 @@ def winnings(hands : Split, dealer : Hand, bet : int) -> int:
         hands,
         0
     )
+# /payouts
+#######################################################################################
+# misc values
 
 def is_natural(hand: Hand) -> bool:
     # this is an indirect check. it works. checking directly through the cards themselves is needlessly harder to do.
@@ -163,11 +174,9 @@ def is_bust(hand : Hand) -> bool:
 def is_max(hand : Hand) -> bool:
     return hand_value(hand) == constants.MAX_HAND_VALUE
 
-def can_split(hand : Hand) -> bool:
-    return cards.card_rank_ord(hand[0]) == cards.card_rank_ord(hand[1])
-
-def init_split(hand : Hand, deck : Deck) -> Split:
-    return [[card, deck.pop()] for card in hand]
+# /misc values
+#######################################################################################
+# insurance
 
 def is_insurable(hand : Hand) -> bool:
     # we can directly access the second card here but it's not shown to user. so this function pretends.
@@ -183,7 +192,28 @@ def insure(dealer : Hand, side_bet : int):
     else:
         return False, 0
 
+# /insurance
+#######################################################################################
+# splits
+
+def can_split(hand : Hand) -> bool:
+    return cards.card_rank_ord(hand[0]) == cards.card_rank_ord(hand[1])
+
+def init_split(hand : Hand, deck : Deck) -> Split:
+    return [[card, deck.pop()] for card in hand]
+
+# /splits
+#######################################################################################
+# dealer
+
 def dealer_play(dealer : Hand, deck : Deck):
+    """
+    Hits cards until the hand value >= constants.MAX_HAND_LEN
+
+    Complexity: O(n)
+
+    Impure
+    """
     i = len(dealer)
     while hand_value(dealer) < constants.DEALER_STOP and i <= constants.MAX_HAND_LEN:
         cards.take_card(dealer, deck)
