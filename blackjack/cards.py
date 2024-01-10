@@ -32,11 +32,6 @@ class Card(NamedTuple):
     rank: Rank
     suit: Suit
 
-class Ordinal(Enum):
-    LT = -1
-    EQ = 0
-    GT = 1
-
 # Type synonyms
 Hand = List[Card]
 Deck = Deque[Card] # deletions are more important than random access and linear traversal and we are likely using a random order of elements. A deque fits this use case better than a list.
@@ -139,53 +134,3 @@ def card_value(card : Card) -> int:
     Complexity: O(1)
     """
     return card[0].value[1]
-
-def hand_value(hand : Hand) -> int:
-    """
-    Accumulates the cards in a hand, including ace rules.
-
-    Complexity: O(n)
-    """
-    # could refactor into functools.reduce/sum() but it might be less understandable.
-    acc = 0
-    aces_count = 0
-
-    for card in hand:
-        if card[0] == Rank.ACE:
-            aces_count += 1
-        else:
-            acc += card_value(card)
-
-    # count aces...
-    for _ in range(aces_count):
-        if acc + Rank.ACE.value[1] <= constants.MAX_HAND_VALUE:
-            acc += Rank.ACE.value[1]
-        else:
-            acc += Rank.ACE.value[0]
-
-    return acc
-
-def compare(a, b) -> Ordinal:
-    """
-    Returns GT,LT, or EQ for any number.
-
-    Complexity: O(1)
-    """
-    if a > b:
-        return Ordinal.GT
-    elif a < b:
-        return Ordinal.LT
-    else:
-        return Ordinal.EQ
-
-def compare_hand(left_hand : Hand, right_hand : Hand) -> Ordinal:
-    """
-    Indicates which hand has the greater cumulative hand value.
-
-    Complexity: O(n)
-    """
-    return compare(
-        hand_value(left_hand),
-        hand_value(right_hand)
-    )
-
