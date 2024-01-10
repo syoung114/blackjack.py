@@ -192,7 +192,7 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
 
             if len(data.player_completed) == 1 and rules.is_natural(data.player_completed[0]):
                 # winning logic specifically for naturals has not yet been applied. The first natural check just said to change stage.
-                data.bank += rules.compare(data.player, data.dealer, data.bet, win_odds=PayoutOrd.THREE_TWO)
+                data.bank += rules.bet_hand(data.player, data.dealer, data.bet, win_odds=PayoutOrd.THREE_TWO)
 
             else:
                 data.bank += rules.winnings(data.player_completed, data.dealer, data.bet)

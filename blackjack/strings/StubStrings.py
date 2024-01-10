@@ -1,6 +1,7 @@
 from .StringProvider import StringProvider
 
-from blackjack.cards import Hand, hand_value
+from blackjack.cards import Hand
+from blackjack.rules import hand_value
 
 class StubStrings(StringProvider):
     """
