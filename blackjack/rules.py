@@ -2,6 +2,7 @@ import functools
 
 from typing import List
 from enum import Enum
+from math import floor
 
 from blackjack import constants
 from blackjack import cards
@@ -86,18 +87,21 @@ def compare_hand(left_hand : Hand, right_hand : Hand) -> Ordinal:
         hand_value(right_hand)
     )
 
-
 def payout(ord : PayoutOrd, bet : int) -> int:
     """
     Returns positive winnings relative to the bet, according to the payout.
 
     Complexity: O(1)
     """
+    if bet < 0:
+        # this is a defensive measure to prevent a pre-exsting bug from spiraling into something worse
+        raise ValueError(f"negative bet in rules.payout(): {bet}")
+
     match ord:
         case PayoutOrd.ONE_ONE:
             return bet
         case PayoutOrd.THREE_TWO:
-            return round(1.5 * bet)
+            return floor(1.5 * bet) # them casinos wouldn't generously let you round up!
         case PayoutOrd.TWO_ONE:
             return 2 * bet
         case _:

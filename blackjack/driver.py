@@ -204,6 +204,7 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
 
         case GameStage.COMPLETE:
 
+            # tear down the state so that we can notice unexpected behavior with None if we start over
             for field in fields(data):
                 if field.name not in ['bank', 'deck']:
                     setattr(data, str(field), None)
