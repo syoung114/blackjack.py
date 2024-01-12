@@ -16,6 +16,7 @@ from blackjack.strings.StringProvider import StringProvider
 class GameStage(Enum):
     ASK_BET = 0
     INIT_DEAL = 10
+    ASK_INSURANCE = 11
     ASK_SPLIT = 20
     PLAYER_ACTIONS = 30 
     PLAYER_DONE = 40
@@ -92,18 +93,23 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
             # deal the player and dealer. modifies the deck via side effect in the process.
             data.player, data.dealer = handle_init_hand(data.deck)
 
-            # default case where they don't want insurance or the insurance fails. ASK_SPLIT is just the next stage.
-            data.stage = GameStage.ASK_SPLIT
+            # default case for if we don't automatically Stay because player holding natural
+            data.stage = GameStage.ASK_INSURANCE
 
             if rules.is_natural(data.player):
                 writer(strings.show_blackjack())
 
                 data.player_completed = [data.player]
                 data.player = []
-                data.stage = GameStage.PLAYER_DONE # still chance of a push
+                data.stage = GameStage.PLAYER_DONE # still chance of a push when dealer plays
+
+        case GameStage.ASK_INSURANCE:
+
+            # default case for if we don't diverge because of successful insurance
+            data.stage = GameStage.ASK_SPLIT
 
             # check and handle insurance
-            elif rules.is_insurable(data.dealer) and ask_want_insurance():
+            if rules.is_insurable(data.dealer) and ask_want_insurance():
 
                 side_bet = rules.insurance_make_side_bet(data.bet)
                 data.bank -= side_bet
@@ -128,18 +134,22 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
                 data.player = rules.init_split(data.player, data.deck)
                 data.stage = GameStage.PLAYER_ACTIONS
 
-                writer(strings.show_hand_status(data.player))
+                for hand in data.player:
+                    writer(strings.show_hand_status(hand))
 
             else:
                 data.stage=GameStage.PLAYER_ACTIONS
 
         case GameStage.PLAYER_ACTIONS: # this is more granular than "for split in splits", being every hit/stay prompt. I think being less granular isn't as true to the state machine model
 
-            #is_split = all(isinstance(elem,list) for elem in data.player)
             is_split = isinstance(data.player[0],list)
-            current_hand = data.player[len(data.player) - 1] if is_split else data.player
-
             hand_completed = False
+            current_hand = None
+
+            if is_split:
+                current_hand = data.player[:-1]
+            else:
+                current_hand = data.player
 
             if ask_hit():
                 cards.take_card(current_hand, data.deck)
