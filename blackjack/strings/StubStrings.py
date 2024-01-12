@@ -25,7 +25,7 @@ class StubStrings(StringProvider):
 
     @staticmethod
     def initial_hand(player, dealer) -> str:
-        return f"Player:{StubStrings.show_hand_status(player)}\nDealer:{dealer[1]}"
+        return f"Player:{StubStrings.show_hand_status(player)}\nDealer:{dealer[0]}"
 
     @staticmethod
     def ask_bet() -> str:
