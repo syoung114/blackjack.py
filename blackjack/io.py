@@ -3,11 +3,11 @@ Relatively pure logic for external interaction, including with that of the reade
 
 """
 
-from typing import Callable, Any
+from typing import Callable
 from functools import partial, singledispatch
 
 class Constraint():
-    def __init__(self, dtype=str, pred=lambda x: True):
+    def __init__(self, dtype=str, pred=lambda: True):
         self.dtype = dtype
         self.pred = pred
 
@@ -17,22 +17,20 @@ class Constraint():
     def within(self, lower, upper):
         return Constraint(
             self.dtype,
-            self.pred and \
-                partial(
-                    lambda lower, upper, x: lower <= x <= upper,
-                    lower,
-                    upper
-                )
+            self.pred and partial(
+                lambda lower, upper, x: lower <= x <= upper,
+                lower,
+                upper
+            )
         )
 
     def equalsAny(self, *vals):
         return Constraint(
             self.dtype,
-            self.pred and \
-                partial(
-                    lambda vals,x: any(x==val for val in vals),
-                    vals
-                )
+            self.pred and partial(
+                lambda vals,x: any(x==val for val in vals),
+                vals
+            )
         )
 
 @singledispatch
