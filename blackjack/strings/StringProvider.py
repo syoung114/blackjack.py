@@ -1,138 +1,149 @@
 from abc import ABC, abstractmethod
 
+from blackjack.state import GameState
 from blackjack.cards import Hand
 
 class StringProvider(ABC):
     """
     Strings for external IO, such as to user via stdin/stdout or for IPC
+
+    When implementing, please don't create side effects with GameState. Treat it as const.
     """
-    ### This could be a hash map for potentially better performance but I prefer the polymorphism, immutibility, and strict interface.
-    ### I know that it's conceptually redundant to state that an abstract method is static but in Python it's required for overrides
+    ### This could be a hash map for potentially better performance but I think the features present in classes will become useful for future extension. The polymorphism alone is worth it.
+    ### I also know that it's conceptually redundant to state that an abstract method is static but in Python it's required for overrides
 
 # ask methods -- these are prompts given when asking for input
 
     @staticmethod
     @abstractmethod
-    def ask_generic_fail() -> str:
+    def ask_generic_fail(state : GameState):
         pass
 
     @staticmethod
     @abstractmethod
-    def ask_bank() -> str:
-        pass
-
-    def ask_bank_fail(self) -> str:
-        return self.ask_generic_fail()
-
-    @staticmethod
-    @abstractmethod
-    def initial_hand(player, dealer) -> str:
+    def ask_bank():
+        # this function is an exception to requiring a GameState because at the time of asking about the bank, there is no state. It would be a catch 22.
         pass
 
     @staticmethod
     @abstractmethod
-    def ask_bet() -> str:
-        pass
-
-    def ask_bet_fail(self) -> str:
-        return self.ask_generic_fail()
-
-    @staticmethod
-    @abstractmethod
-    def ask_insurance() -> str:
-        pass
-
-    def ask_insurance_fail(self) -> str:
-        return self.ask_generic_fail()
-
-    @staticmethod
-    @abstractmethod
-    def ask_split() -> str:
-        pass
-
-    def ask_split_fail(self) -> str:
-        return self.ask_generic_fail()
-
-    @staticmethod
-    @abstractmethod
-    def ask_hit() -> str:
+    def ask_bank_fail():
         pass
 
     @staticmethod
     @abstractmethod
-    def ask_stay() -> str:
+    def ask_bet(state : GameState):
+        pass
+
+    def ask_bet_fail(self, state : GameState):
+        return self.ask_generic_fail(state)
+
+    @staticmethod
+    @abstractmethod
+    def ask_insurance(state : GameState):
+        pass
+
+    def ask_insurance_fail(self, state : GameState):
+        return self.ask_generic_fail(state)
+
+    @staticmethod
+    @abstractmethod
+    def ask_split(state : GameState):
+        pass
+
+    def ask_split_fail(self, state : GameState):
+        return self.ask_generic_fail(state)
+
+    @staticmethod
+    @abstractmethod
+    def ask_hit(state : GameState):
         pass
 
     @staticmethod
     @abstractmethod
-    def ask_hit_stay() -> str:
+    def ask_stay(state : GameState):
         pass
 
-    def ask_hit_stay_fail(self) -> str:
-        return self.ask_generic_fail()
+    @staticmethod
+    @abstractmethod
+    def ask_hit_stay(state : GameState):
+        pass
+
+    def ask_hit_stay_fail(self, state : GameState):
+        return self.ask_generic_fail(state)
 
 # input methods -- constrained texts that an input method must return
 
     @staticmethod
     @abstractmethod
-    def input_yes() -> str:
+    def input_yes(state : GameState):
         pass
 
     @staticmethod
     @abstractmethod
-    def input_no() -> str:
+    def input_no(state : GameState):
         pass
 
     @staticmethod
     @abstractmethod
-    def input_hit() -> str:
+    def input_hit(state : GameState):
         pass
 
     @staticmethod
     @abstractmethod
-    def input_stay() -> str:
+    def input_stay(state : GameState):
         pass
 
 # show methods -- text that shows without requiring further action
-
+    
     @staticmethod
     @abstractmethod
-    def show_insurance_success() -> str:
-        pass
-
-    def show_insurance_fail(self) -> str:
-        return self.ask_generic_fail()
-
-    @staticmethod
-    @abstractmethod
-    def show_hand_status(hand : Hand) -> str:
+    def show_player_hand(state : GameState):
         pass
 
     @staticmethod
     @abstractmethod
-    def show_bust(hand : Hand) -> str:
+    def show_dealer_hand_down(state : GameState):
         pass
 
     @staticmethod
     @abstractmethod
-    def show_bank(bank : int) -> str:
+    def show_dealer_hand_up(state : GameState):
         pass
 
     @staticmethod
     @abstractmethod
-    def show_blackjack() -> str:
+    def show_bust(hand : Hand):
         pass
 
     @staticmethod
     @abstractmethod
-    def show_max_hand() -> str:
+    def show_insurance_success(state : GameState):
+        pass
+
+    def show_insurance_fail(self, state : GameState):
+        return self.ask_generic_fail(state)
+
+    @staticmethod
+    @abstractmethod
+    def show_bank(state : GameState):
         pass
 
     @staticmethod
     @abstractmethod
-    def show_shuffling() -> str:
+    def show_player_blackjack(state : GameState):
         pass
 
-    def show_keyboard_interrupt(self) -> str:
+    @staticmethod
+    @abstractmethod
+    def show_max_hand(state : GameState):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def show_shuffling(state : GameState):
+        pass
+
+    def show_keyboard_interrupt(self, state : GameState):
         # it's safe to assume that this will be the standard library default (as below) or ""
         return "KeyboardInterrupt"

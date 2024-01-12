@@ -2,36 +2,17 @@ import threading
 import time
 import random
 
-from enum import Enum
-from typing import Callable, Union, Optional
-from dataclasses import dataclass, fields
+from typing import Callable
+from dataclasses import fields
 
 from blackjack import rules, cards, io
 
-from blackjack.cards import Hand, Deck
-from blackjack.rules import PayoutOrd, Split
+from blackjack.state import GameState, GameStage
+from blackjack.cards import Deck
+from blackjack.rules import PayoutOrd
 from blackjack.exception.StupidProgrammerException import StupidProgrammerException
 from blackjack.strings.StringProvider import StringProvider
 
-class GameStage(Enum):
-    ASK_BET = 0
-    INIT_DEAL = 10
-    ASK_INSURANCE = 11
-    ASK_SPLIT = 20
-    PLAYER_ACTIONS = 30 
-    PLAYER_DONE = 40
-    UPDATE_BANK = 41
-    COMPLETE = 50
-
-@dataclass
-class GameState:
-    stage : GameStage
-    deck : Deck
-    bank : int
-    bet : Optional[int]
-    dealer : Optional[Hand]
-    player : Optional[Union[Hand, Split]] # TODO decouple for multiple players
-    player_completed : Optional[Split]
 
 def make_deck_epoch():
     """
@@ -57,28 +38,26 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
     def input_require(dtype, prompt, prompt_fail):
         # The reader and writer do not change so typing it repeatedly is annoying
         return io.input_require(dtype, prompt, prompt_fail, reader, writer)
- 
+
     def ask_bet(bank) -> int:
         bet_constraint = io.Constraint().require(int).within(1, bank)
-        bet = input_require(bet_constraint, strings.ask_bet(), strings.ask_bet_fail())
+        bet = input_require(bet_constraint, strings.ask_bet(data), strings.ask_bet_fail(data))
         return bet
 
     def ask_hit() -> bool:
-        return io.ask_binary(strings.input_hit(), strings.input_stay(), strings.ask_hit_stay(), strings.ask_hit_stay_fail(), reader, writer)
+        return io.ask_binary(strings.input_hit(data), strings.input_stay(data), strings.ask_hit_stay(data), strings.ask_hit_stay_fail(data), reader, writer)
 
     def ask_want_split() -> bool:
-        return io.ask_binary(strings.input_yes(), strings.input_no(), strings.ask_split(), strings.ask_split_fail(), reader, writer)
+        return io.ask_binary(strings.input_yes(data), strings.input_no(data), strings.ask_split(data), strings.ask_split_fail(data), reader, writer)
 
     def ask_want_insurance() -> bool:
-        return io.ask_binary(strings.input_yes(), strings.input_no(), strings.ask_insurance(), strings.ask_insurance_fail(), reader, writer)
+        return io.ask_binary(strings.input_yes(data), strings.input_no(data), strings.ask_insurance(data), strings.ask_insurance_fail(data), reader, writer)
 
-    def handle_init_hand(deck : Deck):
-        player = rules.init_hand(deck)
-        dealer = rules.init_hand(deck)
-        writer(
-            strings.initial_hand(player, dealer)
-        )
-        return player, dealer
+    def handle_init_hand():
+        data.player = rules.init_hand(data.deck)
+        data.dealer = rules.init_hand(data.deck)
+        writer(strings.show_player_hand(data))
+        writer(strings.show_dealer_hand_down(data))
 
     match data.stage:
         case GameStage.ASK_BET:
@@ -91,13 +70,13 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
 
         case GameStage.INIT_DEAL:
             # deal the player and dealer. modifies the deck via side effect in the process.
-            data.player, data.dealer = handle_init_hand(data.deck)
+            handle_init_hand()
 
             # default case for if we don't automatically Stay because player holding natural
             data.stage = GameStage.ASK_INSURANCE
 
             if rules.is_natural(data.player):
-                writer(strings.show_blackjack())
+                writer(strings.show_player_blackjack(data))
 
                 data.player_completed = [data.player]
                 data.player = []
@@ -123,10 +102,10 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
                 data.bank += payout
 
                 if insurance_success:
-                    writer(strings.show_insurance_success())
+                    writer(strings.show_insurance_success(data))
                     data.stage = GameStage.COMPLETE # this is intentionally not UPDATE_BANK. UPDATE_BANK compares cards which insurance doesn't do.
                 else:
-                    writer(strings.show_insurance_fail())
+                    writer(strings.show_insurance_fail(data))
 
         case GameStage.ASK_SPLIT:
             if rules.can_split(data.player) and ask_want_split():
@@ -134,8 +113,7 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
                 data.player = rules.init_split(data.player, data.deck)
                 data.stage = GameStage.PLAYER_ACTIONS
 
-                for hand in data.player:
-                    writer(strings.show_hand_status(hand))
+                writer(strings.show_player_hand(data))
 
             else:
                 data.stage=GameStage.PLAYER_ACTIONS
@@ -147,23 +125,30 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
             current_hand = None
 
             if is_split:
-                current_hand = data.player[:-1]
+                # using the last hand because it grants an O(1) removal with .pop(). see the hand_completed block for that.
+                # before you say "use data.player[:-1]", that's not O(1), amusingly.
+                current_hand = data.player[len(data.player) - 1]
             else:
                 current_hand = data.player
 
+            # now ask to hit or stay and respond accordingly
             if ask_hit():
                 cards.take_card(current_hand, data.deck)
 
-                if rules.is_bust(current_hand):
+                # compute hand value upfront so the following two functions don't compute it twice
+                hand_value = rules.hand_value(current_hand)
+
+                # busting won't happen on first deal but remember this state is for later hit/stay actions, unlike INIT_DEAL. 
+                if rules.is_bust(hand_value):
                     writer(strings.show_bust(current_hand))
                     hand_completed = True
 
-                elif rules.is_max(current_hand):
-                    writer(strings.show_max_hand())
+                elif rules.is_max(hand_value):
+                    writer(strings.show_max_hand(data))
                     hand_completed = True
 
                 else:
-                    writer(strings.show_hand_status(current_hand))
+                    writer(strings.show_player_hand(current_hand))
 
             else:
                 hand_completed = True
@@ -194,7 +179,7 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
             if rules.is_bust(data.dealer):
                 writer(strings.show_bust(data.dealer))
             else:
-                writer(strings.show_hand_status(data.dealer))
+                writer(strings.show_dealer_hand_up(data))
 
             data.stage = GameStage.UPDATE_BANK
 
@@ -207,7 +192,7 @@ def transition_logic(data : GameState, strings : StringProvider, reader : Callab
             else:
                 data.bank += rules.winnings(data.player_completed, data.dealer, data.bet)
 
-            writer(strings.show_bank(data.bank))
+            writer(strings.show_bank(data))
 
             data.player_completed = []
             data.stage = GameStage.COMPLETE
@@ -238,15 +223,15 @@ def driver_io(
 
     def ask_bank() -> int:
         return io.input_require(int, strings.ask_bank(), strings.ask_bank_fail(), reader, writer)
+    init_state = GameState(GameStage.ASK_BET, make_deck_epoch(), ask_bank(), None, None, None, None)
 
     try:
-        init_state = GameState(GameStage.ASK_BET, make_deck_epoch(), ask_bank(), None, None, None, None)
         while not ext_stop_pred.is_set():
             if len(init_state.deck) <= 13: # this is arbitrary for the moment while other details are realized.
                 init_state.deck = make_deck_epoch()
-                writer(strings.show_shuffling())
+                writer(strings.show_shuffling(init_state))
             writer(str(init_state.stage))
             transition_logic(init_state, strings, reader, writer)
 
     except KeyboardInterrupt:
-        writer(strings.show_keyboard_interrupt())
+        writer(strings.show_keyboard_interrupt(init_state))

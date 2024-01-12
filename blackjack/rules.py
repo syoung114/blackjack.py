@@ -168,11 +168,21 @@ def is_natural(hand: Hand) -> bool:
     # this is an indirect check. it works. checking directly through the cards themselves is needlessly harder to do.
     return len(hand) == constants.INITIAL_HAND_LEN and is_max(hand)
 
-def is_bust(hand : Hand) -> bool:
-    return hand_value(hand) > constants.MAX_HAND_VALUE
+@functools.singledispatch
+def is_bust(value : int) -> bool:
+    return value > constants.MAX_HAND_VALUE
 
-def is_max(hand : Hand) -> bool:
-    return hand_value(hand) == constants.MAX_HAND_VALUE
+@is_bust.register(list)
+def _(hand : Hand) -> bool:
+    return is_bust(hand_value(hand))
+
+@functools.singledispatch
+def is_max(value : int) -> bool:
+    return value == constants.MAX_HAND_VALUE
+
+@is_max.register(list)
+def _(hand : Hand) -> bool:
+    return is_max(hand_value(hand))
 
 # /misc values
 #######################################################################################
