@@ -1,9 +1,30 @@
 from enum import Enum
-from typing import Union, Optional
+from typing import List, TypeVar
 from dataclasses import dataclass
 
 from blackjack.cards import Deck, Hand
-from blackjack.rules import Split
+
+class FocusList(List[TypeVar('T')]):
+    def __init__(self, *args):
+        super().__init__(args)
+        self._cindex = 0
+
+    def current(self):
+        return self[self._cindex]
+
+    def has_next(self) -> bool:
+        # remember > does not mean >=
+        return len(self) > self._cindex + 1
+
+    def next(self):
+        if self.has_next():
+            self._cindex += 1
+            return self[self._cindex]
+        else:
+            raise StopIteration
+
+    def reset(self):
+        self._cindex = 0
 
 class GameStage(Enum):
     ASK_BET = 0
@@ -17,10 +38,10 @@ class GameStage(Enum):
 
 @dataclass
 class GameState:
+    # as a general guide for type safety, I've ordered this by roughly when they're initialized in the game. if you inspect at runtime you might be able to spot obvious bugs if there's a None before a non-None.
     stage : GameStage
     deck : Deck
     bank : int
-    bet : Optional[int]
-    dealer : Optional[Hand]
-    player : Optional[Union[Hand, Split]] # TODO decouple for multiple players
-    player_completed : Optional[Split]
+    bet : int
+    player : FocusList[Hand]
+    dealer : Hand

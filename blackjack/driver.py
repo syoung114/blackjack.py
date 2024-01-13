@@ -7,7 +7,7 @@ from dataclasses import fields
 
 from blackjack import rules, cards, io
 
-from blackjack.state import GameState, GameStage
+from blackjack.state import FocusList, GameState, GameStage
 from blackjack.rules import PayoutOrd
 from blackjack.exception.StupidProgrammerException import StupidProgrammerException
 from blackjack.strings.StringProvider import StringProvider
@@ -48,34 +48,27 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
     def ask_want_insurance() -> bool:
         return io.ask_binary(strings.input_yes(state), strings.input_no(state), strings.ask_insurance(state), strings.ask_insurance_fail(state), reader, writer)
 
-    def handle_init_hand():
-        state.player = rules.init_hand(state.deck)
-        state.dealer = rules.init_hand(state.deck)
-        writer(strings.show_player_hand(state))
-        writer(strings.show_dealer_hand_down(state))
-
     match state.stage:
         case GameStage.ASK_BET:
             state.bet = ask_bet(state.bank)
-
-            # in blackjack we take away the bet and the player either wins it back (maybe then some) or they don't get anything.
             state.bank -= state.bet
-
             state.stage = GameStage.INIT_DEAL
 
         case GameStage.INIT_DEAL:
-            # deal the player and dealer. modifies the deck via side effect in the process.
-            handle_init_hand()
+            # deal the player and dealer
+            state.player = FocusList(rules.init_hand(state.deck))
+            state.dealer = rules.init_hand(state.deck)
+
+            writer(strings.show_player_hand(state))
+            writer(strings.show_dealer_hand_down(state))
 
             # default case for if we don't automatically Stay because player holding natural
             state.stage = GameStage.ASK_INSURANCE
 
-            if rules.is_natural(state.player):
-                writer(strings.show_player_blackjack(state))
-
-                state.player_completed = [state.player]
-                state.player = []
+            if rules.is_natural(state.player[0]):
                 state.stage = GameStage.PLAYER_DONE # still chance of a push when dealer plays
+                # state.player.next()
+                writer(strings.show_player_blackjack(state))
 
         case GameStage.ASK_INSURANCE:
 
@@ -93,19 +86,18 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
                     side_bet
                 )
 
-                # side_bet_payout is negative for lost bet.
-                state.bank += payout
-
                 if insurance_success:
+                    state.bank += state.bet + payout
+                    state.stage = GameStage.COMPLETE # this is intentionally not UPDATE_BANK. UPDATE_BANK compares player and dealer cards which insurance doesn't do.
                     writer(strings.show_insurance_success(state))
-                    state.stage = GameStage.COMPLETE # this is intentionally not UPDATE_BANK. UPDATE_BANK compares cards which insurance doesn't do.
                 else:
                     writer(strings.show_insurance_fail(state))
 
         case GameStage.ASK_SPLIT:
-            if rules.can_split(state.player) and ask_want_split():
+            if rules.can_split(state.player[0]) and ask_want_split():
 
-                state.player = rules.init_split(state.player, state.deck)
+                # that outer [0] is because [[[a]]] -> [[a]]. that third dimension is a symptom of what init_split returns. it's questionable to add a dependency of FocusList in that function.
+                state.player = FocusList(rules.init_split(state.player[0], state.deck))[0]
                 state.stage = GameStage.PLAYER_ACTIONS
 
                 writer(strings.show_player_hand(state))
@@ -115,27 +107,18 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
 
         case GameStage.PLAYER_ACTIONS: # this is more granular than "for split in splits", being every hit/stay prompt. I think being less granular isn't as true to the state machine model
 
-            is_split = isinstance(state.player[0],list)
             hand_completed = False
-            current_hand = None
-
-            if is_split:
-                # using the last hand because it grants an O(1) removal with .pop(). see the hand_completed block for that.
-                # before you say "use state.player[:-1]", that's not O(1), amusingly.
-                current_hand = state.player[len(state.player) - 1]
-            else:
-                current_hand = state.player
 
             # now ask to hit or stay and respond accordingly
             if ask_hit():
-                cards.take_card(current_hand, state.deck)
+                cards.take_card(state.player.current(), state.deck)
 
                 # compute hand value up front so the following two functions don't compute it twice
-                hand_value = rules.hand_value(current_hand)
+                hand_value = rules.hand_value(state.player.current())
 
                 # busting won't happen on first deal but remember this state is for later hit/stay actions, unlike INIT_DEAL. 
                 if rules.is_bust(hand_value):
-                    writer(strings.show_bust(current_hand))
+                    writer(strings.show_bust(state.player.current()))
                     hand_completed = True
 
                 elif rules.is_max(hand_value):
@@ -143,32 +126,21 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
                     hand_completed = True
 
                 else:
-                    writer(strings.show_player_hand(current_hand))
+                    writer(strings.show_player_hand(state.player.current()))
 
             else:
                 hand_completed = True
 
             if hand_completed:
-                # Because splits and hands aren't equal representations we must handle inserting them differently into the player_completed list.
-
-                # Up to this point player_completed has potentially not been used.
-                if state.player_completed == None:
-                    state.player_completed = []
-
-                if is_split:
-                    state.player_completed.append(state.player.pop())
-
+                if state.player.has_next():
+                    # increment the internal counter
+                    state.player.next()
                 else:
-                    # state.player.pop() doesn't work because that removes a single card
-                    state.player_completed.append(state.player)
-                    state.player = []
-
-                if len(state.player) == 0:
                     state.stage = GameStage.PLAYER_DONE
-
 
         case GameStage.PLAYER_DONE:
             rules.dealer_play(state.dealer, state.deck)
+            state.stage = GameStage.UPDATE_BANK
 
             # if the dealer busted then report it.
             if rules.is_bust(state.dealer):
@@ -176,32 +148,28 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
             else:
                 writer(strings.show_dealer_hand_up(state))
 
-            state.stage = GameStage.UPDATE_BANK
-
         case GameStage.UPDATE_BANK:
 
-            if len(state.player_completed) == 1 and rules.is_natural(state.player_completed[0]):
-                # winning logic specifically for naturals has not yet been applied. The first natural check just said to change stage.
-                state.bank += rules.bet_hand(state.player, state.dealer, state.bet, win_odds=PayoutOrd.THREE_TWO)
+            # winning logic specifically for naturals has not yet been applied. When we transitioned from a blackjack, the code didn't compute winnings. We now compute winnings.
+            if len(state.player) == 1 and rules.is_natural(state.player[0]):
+                # importantly notice that state.player[0]. Easy to miss if refactoring.
+                state.bank += rules.bet_hand(state.player[0], state.dealer, state.bet, win_odds=PayoutOrd.THREE_TWO)
 
             else:
-                state.bank += rules.winnings(state.player_completed, state.dealer, state.bet)
+                state.bank += rules.winnings(state.player, state.dealer, state.bet)
 
-            writer(strings.show_bank(state))
-
-            state.player_completed = []
             state.stage = GameStage.COMPLETE
+            writer(strings.show_bank(state))
 
         case GameStage.COMPLETE:
 
             # tear down the state so that we can notice unexpected behavior with None if we start over
             for field in fields(state):
+                # the attributes in the list are those allowed to persist between rounds
                 if field.name not in ['bank', 'deck']:
                     setattr(state, str(field), None)
 
             state.stage = GameStage.ASK_BET
-            #state.bank = None
-            # deck is allowed to persist
 
         case _:
             raise StupidProgrammerException(f"missed case {state.stage} in driver.transition_logic")
