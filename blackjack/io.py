@@ -33,6 +33,15 @@ class Constraint():
             )
         )
 
+    def at_least(self, lower : int):
+        return Constraint(
+            self.dtype,
+            self.pred and partial(
+                lambda lower,x: x >= lower,
+                lower
+            )
+        )
+
 @singledispatch
 def input_require(
     dtype,

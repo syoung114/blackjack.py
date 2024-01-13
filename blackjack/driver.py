@@ -185,8 +185,9 @@ def driver_io(
     """
     try:
         def ask_bank() -> int:
-            return io.input_require(int, strings.ask_bank(), strings.ask_bank_fail(), reader, writer)
-        init_state = GameState(GameStage.ASK_BET, make_deck_epoch(), ask_bank(), None, None, None, None)
+            constraint = io.Constraint().require(int).at_least(1)
+            return io.input_require(constraint, strings.ask_bank(), strings.ask_bank_fail(), reader, writer)
+        init_state = GameState(GameStage.ASK_BET, make_deck_epoch(), ask_bank(), None, None, None)
 
         while not ext_stop_pred.is_set():
             if len(init_state.deck) <= 13: # this is arbitrary for the moment while other details are realized.

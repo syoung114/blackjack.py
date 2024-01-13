@@ -35,9 +35,9 @@ class StubStrings(StringProvider):
     def ask_insurance(state : GameState):
         return "ask_insurance"
 
-    #@staticmethod
-    #def ask_insurance_fail(state : GameState):
-    #    return .ask_generic_fail()
+    @staticmethod
+    def show_insurance_fail(state : GameState):
+        return "insurance_fail"
 
     @staticmethod
     def ask_split(state : GameState):
