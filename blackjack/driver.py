@@ -12,7 +12,6 @@ from blackjack.rules import PayoutOrd
 from blackjack.exception.StupidProgrammerException import StupidProgrammerException
 from blackjack.strings.StringProvider import StringProvider
 
-
 def make_deck_epoch():
     """
     Makes a 52 random deck seeded by epoch (POSIX time) in milliseconds.
