@@ -66,6 +66,14 @@ class StringProvider(ABC):
 
     @staticmethod
     @abstractmethod
+    def ask_hit_stay_double(state : GameState):
+        pass
+
+    def ask_hit_stay_double_fail(self, state : GameState):
+        return self.ask_generic_fail(state)
+
+    @staticmethod
+    @abstractmethod
     def ask_hit_stay(state : GameState):
         pass
 
@@ -76,22 +84,27 @@ class StringProvider(ABC):
 
     @staticmethod
     @abstractmethod
-    def input_yes(state : GameState):
+    def input_yes():
         pass
 
     @staticmethod
     @abstractmethod
-    def input_no(state : GameState):
+    def input_no():
         pass
 
     @staticmethod
     @abstractmethod
-    def input_hit(state : GameState):
+    def input_hit():
         pass
 
     @staticmethod
     @abstractmethod
-    def input_stay(state : GameState):
+    def input_stay():
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def input_double():
         pass
 
 # show methods -- text that shows without requiring further action

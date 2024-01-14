@@ -1,3 +1,5 @@
+from enum import Enum
+from functools import partial
 import threading
 import time
 import random
@@ -33,19 +35,42 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
 
     @arg state A GameState representing a snapshot of the working state
     """
+    class PlayerAction(Enum):
+        DOUBLE = 2
+        HIT = 1
+        STAY = 0
+
     def ask_bet(bank) -> int:
         bet_constraint = io.Constraint().require(int).within(constants.MIN_BET, bank)
         bet = io.input_require(bet_constraint, strings.ask_bet(state), strings.ask_bet_fail(state), reader, writer)
         return bet
 
     def ask_hit() -> bool:
-        return io.ask_binary(strings.input_hit(state), strings.input_stay(state), strings.ask_hit_stay(state), strings.ask_hit_stay_fail(state), reader, writer)
+        return io.ask_binary(strings.input_hit(), strings.input_stay(), strings.ask_hit_stay(state), strings.ask_hit_stay_fail(state), reader, writer)
+
+    def ask_hit_stay_double() -> PlayerAction:
+        constraint = io.Constraint().equalsAny(strings.input_hit(), strings.input_stay(), strings.input_double())
+        user = io.input_require(constraint, strings.ask_hit_stay_double(state), strings.ask_hit_stay_double_fail(state), reader, writer)
+
+        # I just realized that pattern matching is just a partial equality function...
+        # The below also isn't just me showing off. I match I wrote didn't work because of some error about "expecting a class". It probably had to do with calling functions in the match case.
+        user_match = partial(lambda a,b: a==b, user)
+        if user_match(strings.input_double()):
+            return PlayerAction.DOUBLE
+
+        if user_match(strings.input_hit()):
+            return PlayerAction.HIT
+
+        if user_match(strings.input_stay()):
+            return PlayerAction.STAY
+
+        raise StupidProgrammerException("missing case in ask_hit_stay_double")
 
     def ask_want_split() -> bool:
-        return io.ask_binary(strings.input_yes(state), strings.input_no(state), strings.ask_split(state), strings.ask_split_fail(state), reader, writer)
+        return io.ask_binary(strings.input_yes(), strings.input_no(), strings.ask_split(state), strings.ask_split_fail(state), reader, writer)
 
     def ask_want_insurance() -> bool:
-        return io.ask_binary(strings.input_yes(state), strings.input_no(state), strings.ask_insurance(state), strings.ask_insurance_fail(state), reader, writer)
+        return io.ask_binary(strings.input_yes(), strings.input_no(), strings.ask_insurance(state), strings.ask_insurance_fail(state), reader, writer)
 
     match state.stage:
         case GameStage.ASK_BET:
@@ -108,10 +133,27 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
 
         case GameStage.PLAYER_ACTIONS: # this is more granular than "for split in splits", being every hit/stay prompt. I think being less granular isn't as true to the state machine model
 
+            # for control flow of stays and busts
             hand_completed = False
 
-            # now ask to hit or stay and respond accordingly
-            if ask_hit():
+            # player decision
+            hit_stay_double = None
+
+            # check if double is possible by asking if initial hand
+            if len(state.player.current()) == constants.INITIAL_HAND_LEN and state.bank - state.bet >= 0:
+
+                hit_stay_double = ask_hit_stay_double()
+                if hit_stay_double == PlayerAction.DOUBLE:
+                    state.bank -= state.bet
+                    state.bet *= 2
+                    hand_completed = True
+
+            # this hand isn't initial
+            else:
+                hit_stay_double = PlayerAction.HIT if ask_hit() else PlayerAction.STAY
+
+            # handle hits and doubles. in the case of doubles, the following logic is the same but hand_completed is overridden to be True, because the next card is their last regardless of result.
+            if hit_stay_double == PlayerAction.HIT or hit_stay_double == PlayerAction.DOUBLE:
                 cards.take_card(state.player.current(), state.deck)
 
                 # compute hand value up front so the following two functions don't compute it twice
@@ -129,8 +171,11 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
                 else:
                     writer(strings.show_player_hand(state.player.current()))
 
-            else:
+            elif hit_stay_double == PlayerAction.STAY:
                 hand_completed = True
+
+            else:
+                raise StupidProgrammerException("missed hit/stay/double implementation")
 
             if hand_completed:
                 if state.player.has_next():

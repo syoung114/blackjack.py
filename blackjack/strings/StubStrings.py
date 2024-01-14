@@ -59,6 +59,10 @@ class StubStrings(StringProvider):
     def ask_hit_stay(state : GameState):
         return "ask_hit_stay"
 
+    @staticmethod
+    def ask_hit_stay_double(state : GameState):
+        return "ask_hit_stay_double"
+
     #@staticmethod
     #def ask_hit_stay_fail(state : GameState):
     #    return .ask_generic_fail()
@@ -66,20 +70,24 @@ class StubStrings(StringProvider):
 # input methods -- constrained texts that an input method must return
 
     @staticmethod
-    def input_yes(state : GameState):
+    def input_yes():
         return "yes"
 
     @staticmethod
-    def input_no(state : GameState):
+    def input_no():
         return "no"
 
     @staticmethod
-    def input_hit(state : GameState):
+    def input_hit():
         return "hit"
 
     @staticmethod
-    def input_stay(state : GameState):
+    def input_stay():
         return "stay"
+
+    @staticmethod
+    def input_double():
+        return "double"
 
 # show methods -- text that shows without requiring further action
 
