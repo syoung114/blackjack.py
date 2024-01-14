@@ -1,30 +1,8 @@
 from enum import Enum
-from typing import List, TypeVar
+from typing import List
 from dataclasses import dataclass
 
 from blackjack.cards import Deck, Hand
-
-class FocusList(List[TypeVar('T')]):
-    def __init__(self, *args):
-        super().__init__(args)
-        self._cindex = 0
-
-    def current(self):
-        return self[self._cindex]
-
-    def has_next(self) -> bool:
-        # remember > does not mean >=
-        return len(self) > self._cindex + 1
-
-    def next(self):
-        if self.has_next():
-            self._cindex += 1
-            return self[self._cindex]
-        else:
-            raise StopIteration
-
-    def reset(self):
-        self._cindex = 0
 
 class GameStage(Enum):
     ASK_BET = 0
@@ -43,5 +21,6 @@ class GameState:
     deck : Deck
     bank : int
     bet : int
-    player : FocusList[Hand]
+    player : List[Hand]
+    current_hand : int
     dealer : Hand

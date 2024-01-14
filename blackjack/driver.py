@@ -9,7 +9,7 @@ from dataclasses import fields
 
 from blackjack import constants, rules, cards, io
 
-from blackjack.state import FocusList, GameState, GameStage
+from blackjack.state import GameState, GameStage
 from blackjack.rules import PayoutOrd
 from blackjack.exception.StupidProgrammerException import StupidProgrammerException
 from blackjack.strings.StringProvider import StringProvider
@@ -80,7 +80,8 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
 
         case GameStage.INIT_DEAL:
             # deal the player and dealer
-            state.player = FocusList(rules.init_hand(state.deck))
+            state.player = [rules.init_hand(state.deck)]
+            state.current_hand = 0
             state.dealer = rules.init_hand(state.deck)
 
             writer(strings.show_player_hand(state))
@@ -89,8 +90,9 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
             # default case for if we don't automatically Stay because player holding natural
             state.stage = GameStage.ASK_INSURANCE
 
-            if rules.is_natural(state.player[0]):
+            if rules.is_natural(state.player[state.current_hand]):
                 state.stage = GameStage.PLAYER_DONE # still chance of a push when dealer plays
+                state.current_hand += 1
                 # state.player.next()
                 writer(strings.show_player_blackjack(state))
 
@@ -120,10 +122,12 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
                     writer(strings.show_insurance_fail(state))
 
         case GameStage.ASK_SPLIT:
-            if rules.can_split(state.player[0]) and ask_want_split():
+            # note that although I put state.current_hand in the following, it means zero. It's for consistency and development flexibility.
+            if rules.can_split(state.player[state.current_hand]) and ask_want_split():
 
-                # that outer [0] is because [[[a]]] -> [[a]]. that third dimension is a symptom of what init_split returns. it's questionable to add a dependency of FocusList in that function.
-                state.player = FocusList(rules.init_split(state.player[0], state.deck))[0]
+                # [[Hand]] -> [[Hand], [Hand]]
+                # therefore state.current_hand doesn't change
+                state.player = rules.init_split(state.player[state.current_hand], state.deck)
                 state.stage = GameStage.PLAYER_ACTIONS
 
                 writer(strings.show_player_hand(state))
@@ -140,7 +144,7 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
             hit_stay_double = None
 
             # check if double is possible by asking if initial hand
-            if len(state.player.current()) == constants.INITIAL_HAND_LEN and state.bank - state.bet >= 0:
+            if len(state.player[state.current_hand]) == constants.INITIAL_HAND_LEN and state.bank - state.bet >= 0:
 
                 hit_stay_double = ask_hit_stay_double()
                 if hit_stay_double == PlayerAction.DOUBLE:
@@ -154,14 +158,14 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
 
             # handle hits and doubles. in the case of doubles, the following logic is the same but hand_completed is overridden to be True, because the next card is their last regardless of result.
             if hit_stay_double == PlayerAction.HIT or hit_stay_double == PlayerAction.DOUBLE:
-                cards.take_card(state.player.current(), state.deck)
+                cards.take_card(state.player[state.current_hand], state.deck)
 
                 # compute hand value up front so the following two functions don't compute it twice
-                hand_value = rules.hand_value(state.player.current())
+                hand_value = rules.hand_value(state.player[state.current_hand])
 
                 # busting won't happen on first deal but remember this state is for later hit/stay actions, unlike INIT_DEAL. 
                 if rules.is_bust(hand_value):
-                    writer(strings.show_bust(state.player.current()))
+                    writer(strings.show_bust(state.player[state.current_hand]))
                     hand_completed = True
 
                 elif rules.is_max(hand_value):
@@ -169,7 +173,7 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
                     hand_completed = True
 
                 else:
-                    writer(strings.show_player_hand(state.player.current()))
+                    writer(strings.show_player_hand(state.player[state.current_hand]))
 
             elif hit_stay_double == PlayerAction.STAY:
                 hand_completed = True
@@ -178,10 +182,8 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
                 raise StupidProgrammerException("missed hit/stay/double implementation")
 
             if hand_completed:
-                if state.player.has_next():
-                    # increment the internal counter
-                    state.player.next()
-                else:
+                state.current_hand += 1
+                if len(state.player) == state.current_hand:
                     state.stage = GameStage.PLAYER_DONE
 
         case GameStage.PLAYER_DONE:
