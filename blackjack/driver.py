@@ -5,7 +5,7 @@ import random
 from typing import Callable
 from dataclasses import fields
 
-from blackjack import rules, cards, io
+from blackjack import constants, rules, cards, io
 
 from blackjack.state import FocusList, GameState, GameStage
 from blackjack.rules import PayoutOrd
@@ -34,7 +34,7 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
     @arg state A GameState representing a snapshot of the working state
     """
     def ask_bet(bank) -> int:
-        bet_constraint = io.Constraint().require(int).within(1, bank)
+        bet_constraint = io.Constraint().require(int).within(constants.MIN_BET, bank)
         bet = io.input_require(bet_constraint, strings.ask_bet(state), strings.ask_bet_fail(state), reader, writer)
         return bet
 
@@ -186,7 +186,7 @@ def driver_io(
     """
     try:
         def ask_bank() -> int:
-            constraint = io.Constraint().require(int).at_least(1)
+            constraint = io.Constraint().require(int).at_least(constants.MIN_BET)
             return io.input_require(constraint, strings.ask_bank(), strings.ask_bank_fail(), reader, writer)
         init_state = GameState(GameStage.ASK_BET, make_deck_epoch(), ask_bank(), None, None, None)
 
