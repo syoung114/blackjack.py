@@ -213,7 +213,7 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
             for field in fields(state):
                 # the attributes in the list are those allowed to persist between rounds
                 if field.name not in ['bank', 'deck']:
-                    setattr(state, str(field), None)
+                    setattr(state, str(field.name), None)
 
             state.stage = GameStage.ASK_BET
 
