@@ -61,71 +61,46 @@ def test_transition_logic_INIT_DEAL_natural():
         # not insurable
         GameState(GameStage.ASK_INSURANCE, None, 90, 10, None, parse_hand("2H2S")),
         GameState(GameStage.ASK_SPLIT, None, 90, 10, None, parse_hand("2H2S")),
-        InputMock([]) # we are also testing if the input didn't prompt here. We can't take from empty queue.
+        InputMock([]), # we are also testing if the input didn't prompt here. We can't take from empty queue.
     ),
     (
         # face down ace (even if it's actually blackjack). should be identical path to previous test.
         GameState(GameStage.ASK_INSURANCE, None, 90, 10, None, helper_hands.hand_blackjack_ace_down()),
         GameState(GameStage.ASK_SPLIT, None, 90, 10, None, helper_hands.hand_blackjack_ace_down()),
-        InputMock([]) # we are also testing if the input didn't prompt here. We can't take from empty queue.
+        InputMock([]), # we are also testing if the input didn't prompt here. We can't take from empty queue.
+    ),
+    (
+        # Insufficient funds. In insurance this would result from the player going all in.
+        # this test ensures they aren't prompted for insurance at $0
+        GameState(GameStage.ASK_INSURANCE, None, 0, 10, None, helper_hands.hand_blackjack_ace_up()),
+        GameState(GameStage.ASK_SPLIT, None, 0, 10, None, helper_hands.hand_blackjack_ace_up()),
+        InputMock([]), # we are also testing if the input didn't prompt here. We can't take from empty queue.
     ),
     (
         # insurable (and it *is* blackjack) but player doesn't want it (they can't see that it's blackjack)
         GameState(GameStage.ASK_INSURANCE, None, 90, 10, None, helper_hands.hand_blackjack_ace_up()),
         GameState(GameStage.ASK_SPLIT, None, 90, 10, None, helper_hands.hand_blackjack_ace_up()),
-        InputMock(["no"]) # we are also testing if the input didn't prompt here. We can't take from empty queue.
+        InputMock(["no"]),
     ),
     (
         # insurance fails. see https://boardgames.stackexchange.com/a/27182
         # see also integration test where player loses insurance and plays on
         GameState(GameStage.ASK_INSURANCE, None, 800, 200, None, parse_hand("AS2S")),
         GameState(GameStage.ASK_SPLIT, None, 700, 200, None, parse_hand("AS2S")),
-        InputMock(["yes"])
+        InputMock(["yes"]),
     ),
     (
         # insurance succeeds. see https://boardgames.stackexchange.com/a/27182
         # the bet persisting is intentional.
         GameState(GameStage.ASK_INSURANCE, None, 800, 200, None, helper_hands.hand_blackjack_ace_up()),
         GameState(GameStage.COMPLETE, None, 1000, 200, None, helper_hands.hand_blackjack_ace_up()),
-        InputMock(["yes"])
+        InputMock(["yes"]),
     )
 ])
 def test_transition_logic_ASK_INSURANCE(state_in, state_ex, input_mock):
     driver.transition_logic(state_in, TestStrings(), input_mock.input, print_stub)
     assert state_in == state_ex
-
-
-
-
-@pytest.mark.parametrize("state_in,state_ex,input_mock", [
-    (
-        # can't split
-        GameState(GameStage.ASK_SPLIT, None, None, None, [parse_hand("2H3H")], None),
-        GameState(GameStage.PLAYER_ACTIONS, None, None, None, [parse_hand("2H3H")], None),
-        InputMock([])
-    ),
-    (
-        # player declines split
-        GameState(GameStage.ASK_SPLIT, None, None, None, [parse_hand("ACAD")], None),
-        GameState(GameStage.PLAYER_ACTIONS, None, None, None, [parse_hand("ACAD")], None),
-        InputMock(["no"])
-    ),
-    (
-        # player accepts split
-        GameState(GameStage.ASK_SPLIT, parse_hand("3D4H"), None, None, [parse_hand("ACAD")], None),
-        GameState(GameStage.PLAYER_ACTIONS, [], None, None, [parse_hand("AC4H"), parse_hand("AD3D")], None),
-        InputMock(["yes"])
-    ),
-    (
-        # player accepts split which reveals a hand which too can be split. Here nothing extra happens
-        GameState(GameStage.ASK_SPLIT, parse_hand("AHAS"), None, None, [parse_hand("ACAD")], None),
-        GameState(GameStage.PLAYER_ACTIONS, [], None, None, [parse_hand("ACAS"), parse_hand("ADAH")], None),
-        InputMock(["yes"])
-    )
-])
-def test_transition_logic_ASK_INSURANCE(state_in, state_ex, input_mock):
-    driver.transition_logic(state_in, TestStrings(), input_mock.input, print_stub)
-    assert state_in == state_ex
+    assert input_mock.empty()
 
 
 

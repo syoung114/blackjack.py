@@ -75,9 +75,11 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
             state.stage = GameStage.ASK_SPLIT
 
             # check and handle insurance
-            if rules.is_insurable(state.dealer) and ask_want_insurance():
+            # I'm partial to walrus operator but its lazy nature is very useful here.
+            if (rules.is_insurable(state.dealer) and
+                0 <= state.bank - (side_bet := rules.insurance_make_side_bet(state.bet)) and
+                ask_want_insurance()):
 
-                side_bet = rules.insurance_make_side_bet(state.bet)
                 state.bank -= side_bet
 
                 insurance_success, payout = rules.insure(
@@ -86,7 +88,7 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
                 )
 
                 if insurance_success:
-                    state.bank += state.bet + payout
+                    state.bank += payout
                     state.stage = GameStage.COMPLETE # this is intentionally not UPDATE_BANK. UPDATE_BANK compares player and dealer cards which insurance doesn't do.
                     writer(strings.show_insurance_success(state))
                 else:
