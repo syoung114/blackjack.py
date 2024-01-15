@@ -112,15 +112,21 @@ def test_transition_logic_ASK_INSURANCE(state_in, state_ex, input_mock):
         InputMock([])
     ),
     (
+        # can split but insufficient funds
+        GameState(GameStage.ASK_SPLIT, None, 0, 100, [helper_hands.hand_2C2D()], 0, None),
+        GameState(GameStage.PLAYER_ACTIONS, None, 0, 100, [helper_hands.hand_2C2D()], 0, None),
+        InputMock([])
+    ),
+    (
         # can split but player declines
-        GameState(GameStage.ASK_SPLIT, None, None, None, [helper_hands.hand_2C2D()], 0, None),
-        GameState(GameStage.PLAYER_ACTIONS, None, None, None, [helper_hands.hand_2C2D()], 0, None),
+        GameState(GameStage.ASK_SPLIT, None, 100, 10, [helper_hands.hand_2C2D()], 0, None),
+        GameState(GameStage.PLAYER_ACTIONS, None, 100, 10, [helper_hands.hand_2C2D()], 0, None),
         InputMock(["no"])
     ),
     (
         # can split and player accepts
-        GameState(GameStage.ASK_SPLIT, parse_hand("3C3D"), None, None, [helper_hands.hand_2C2D()], 0, None),
-        GameState(GameStage.PLAYER_ACTIONS, [], None, None, [parse_hand("2C3D"), parse_hand("2D3C")], 0, None),
+        GameState(GameStage.ASK_SPLIT, parse_hand("3C3D"), 100, 10, [helper_hands.hand_2C2D()], 0, None),
+        GameState(GameStage.PLAYER_ACTIONS, [], 90, 20, [parse_hand("2C3D"), parse_hand("2D3C")], 0, None),
         InputMock(["yes"])
     ),
 
@@ -189,8 +195,13 @@ def test_transition_logic_PLAYER_ACTIONS_single_double(state_in,state_ex):
 
 
 
-#def test_transition_logic_PLAYER_ACTIONS_single_stay():
-#    state_in = GameState(GameStage.PLAYER_ACTIONS, None, None, [
+def test_transition_logic_PLAYER_ACTIONS_single_stay():
+    state_in = GameState(GameStage.PLAYER_ACTIONS, None, None, None, [helper_hands.hand_17_len_3()], 0, None)
+    state_out = GameState(GameStage.PLAYER_DONE, None, None, None, [helper_hands.hand_17_len_3()], 1, None)
+
+    driver.transition_logic(state_in, TestStrings(), InputMock(["stay"]).input, print_stub)
+
+    assert state_in == state_out
 
 
 def test_transition_logic_PLAYER_DONE(fix_deck_alphabetical_52):
@@ -206,6 +217,57 @@ def test_transition_logic_PLAYER_DONE(fix_deck_alphabetical_52):
     # we just want to acknowledge that some transformation happened here. the details are a lower level of testing (which we've already covered)..
     assert original_deck_len > len(fix_deck_alphabetical_52)
     assert state_in.dealer != helper_hands.hand_2C2D()
+
+
+
+
+@pytest.mark.parametrize("state_in,state_ex", [
+    (
+        # natural winning blackjack. also covered in integration tests.
+        GameState(GameStage.UPDATE_BANK, None, 100, 100, [helper_hands.hand_blackjack_ace_up()], 1, helper_hands.hand_17_len_2()),
+        GameState(GameStage.COMPLETE, None, 350, 0, [helper_hands.hand_blackjack_ace_up()], 1, helper_hands.hand_17_len_2()),
+    ),
+    (
+        # natural pushing blackjack. also covered in integration tests.
+        GameState(GameStage.UPDATE_BANK, None, 100, 100, [helper_hands.hand_blackjack_ace_up()], 1, helper_hands.hand_blackjack_ace_down()),
+        GameState(GameStage.COMPLETE, None, 200, 0, [helper_hands.hand_blackjack_ace_up()], 1, helper_hands.hand_blackjack_ace_down()),
+    ),
+    (
+        # 21 (non natural) vs 20
+        GameState(GameStage.UPDATE_BANK, None, 100, 100, [parse_hand("10C QD AS")], 1, parse_hand("JD KD")),
+        GameState(GameStage.COMPLETE, None, 300, 0, [parse_hand("10C QD AS")], 1, parse_hand("JD KD")),
+    ),
+    (
+        # one hand, length 2, winning, but not 21
+        GameState(GameStage.UPDATE_BANK, None, 100, 100, [helper_hands.hand_18_len_2()], 1, helper_hands.hand_17_len_2()),
+        GameState(GameStage.COMPLETE, None, 300, 0, [helper_hands.hand_18_len_2()], 1, helper_hands.hand_17_len_2()),
+    ),
+    (
+        # two hands, both win, see also test_rules.test_winnings
+        GameState(GameStage.UPDATE_BANK, None, 0, 200, [helper_hands.hand_18_len_3(), helper_hands.hand_18_len_2()], 2, helper_hands.hand_17_len_3()),
+        GameState(GameStage.COMPLETE, None, 400, 0, [helper_hands.hand_18_len_3(), helper_hands.hand_18_len_2()], 2, helper_hands.hand_17_len_3()),
+    ),
+    (
+        # two hands, one win, one push. see also test_rules.test_winnings
+        GameState(GameStage.UPDATE_BANK, None, 0, 200, [helper_hands.hand_18_len_3(), helper_hands.hand_17_len_2()], 2, helper_hands.hand_17_len_3()),
+        GameState(GameStage.COMPLETE, None, 300, 0, [helper_hands.hand_18_len_3(), helper_hands.hand_17_len_2()], 2, helper_hands.hand_17_len_3()),
+    ),
+    (
+        # two hands, one win, one loss. see also test_rules.test_winnings
+        GameState(GameStage.UPDATE_BANK, None, 0, 200, [helper_hands.hand_18_len_3(), helper_hands.hand_2C2D()], 2, helper_hands.hand_17_len_3()),
+        GameState(GameStage.COMPLETE, None, 200, 0, [helper_hands.hand_18_len_3(), helper_hands.hand_2C2D()], 2, helper_hands.hand_17_len_3()),
+    ),
+    (
+        # two hands, both loss. see also test_rules.test_winnings
+        GameState(GameStage.UPDATE_BANK, None, 0, 200, [helper_hands.hand_18_len_3(), helper_hands.hand_2C2D()], 2, helper_hands.hand_blackjack_ace_down()),
+        GameState(GameStage.COMPLETE, None, 0, 0, [helper_hands.hand_18_len_3(), helper_hands.hand_2C2D()], 2, helper_hands.hand_blackjack_ace_down()),
+    ),
+])
+def test_transition_logic_UPDATE_BANK(state_in,state_ex):
+    input_mock = InputMock([])
+    driver.transition_logic(state_in,TestStrings(),input_mock.input,print_stub)
+    assert state_in==state_ex
+    assert input_mock.empty()
 
 
 

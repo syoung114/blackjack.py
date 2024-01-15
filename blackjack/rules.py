@@ -10,8 +10,6 @@ from blackjack import cards
 from blackjack.cards import Hand, Deck, Rank
 from blackjack.exception.StupidProgrammerException import StupidProgrammerException
 
-Split = List[Hand]
-
 class Ordinal(Enum):
     LT = -1
     EQ = 0
@@ -148,18 +146,20 @@ def bet_hand(player : Hand, dealer : Hand, bet : int, win_odds : PayoutOrd=Payou
             raise StupidProgrammerException("Missing pattern match in blackjack.bet_hand()")
 
 
-def winnings(hands : Split, dealer : Hand, bet : int) -> int:
+def winnings(hands : List[Hand], dealer : Hand, bet : int) -> int:
     """
     Computes bet winnings per hand split against the dealer.
 
     Complexity: O(n)
     """
     # naturals are 1:1 on split hands. fortunately this rule is accidentally built in already and nothing has to be done.
+    bet_splice = round(bet / len(hands)) # TODO not scalable to len > 2 hands, if that were possible. this calculation is based on the assumption that the bet was *= 2 at split. also theoretically possible division by zero
     return functools.reduce(
-        lambda acc,hand: acc + bet_hand(hand, dealer, bet),
+        lambda acc,hand: acc + bet_hand(hand, dealer, bet_splice),
         hands,
         0
     )
+
 # /payouts
 #######################################################################################
 # misc values
@@ -209,7 +209,7 @@ def insure(dealer : Hand, side_bet : int):
 def can_split(hand : Hand) -> bool:
     return cards.card_rank_ord(hand[0]) == cards.card_rank_ord(hand[1])
 
-def init_split(hand : Hand, deck : Deck) -> Split:
+def init_split(hand : Hand, deck : Deck) -> List[Hand]:
     return [[card, deck.pop()] for card in hand]
 
 # /splits

@@ -168,6 +168,50 @@ def test_payout_exceptions(payout,bet,exception):
     # player busts and not dealer, dealer==4
     (hands.hand_bust_1(), hands.hand_2C2D(), 10, 0),
     # player not bust but dealer bust, player==21
+    (hands.hand_blackjack_ace_up(), hands.hand_bust_dealer(), 10, 20),
+    # player not bust but dealer bust, player==4
+    (hands.hand_2C2D(), hands.hand_bust_dealer(), 10, 20),
+    # the following is for neither bust...
+    # greater hand, equal lengths
+    (hands.hand_18_len_2(), hands.hand_17_len_2(), 10, 20),
+    # greater hand, equal length (2)
+    (hands.hand_blackjack_ace_up(), cards.parse_hand("QC 10D"), 10, 20),
+    # greater hand, greater length
+    (cards.parse_hand("2C 2D 2H 2S 3C 3D 3H AS"), hands.hand_17_len_2(), 10, 20),
+    # greater hand, smaller length
+    (hands.hand_18_len_2(), hands.hand_17_len_3(), 10, 20),
+    # lesser hand, equal lengths
+    (hands.hand_17_len_2(), hands.hand_18_len_2(), 10, 0),
+    # lesser hand, equal length (2)
+    (cards.parse_hand("QC 10D"), hands.hand_blackjack_ace_down(), 10, 0),
+    # lesser hand, greater length
+    (hands.hand_17_len_3(), hands.hand_18_len_2(), 10, 0),
+    # lesser hand, smaller length
+    (hands.hand_17_len_2(), hands.hand_18_len_3(), 10, 0),
+    # equal hand, equal length (1)
+    (hands.hand_blackjack_ace_up(), hands.hand_blackjack_ace_down(), 10, 10),
+    # equal hand, equal length (2)
+    (hands.hand_blackjack_ace_down(), hands.hand_blackjack_ace_up(), 10, 10),
+    # equal hand, equal length (3)
+    (cards.parse_hand("10C 7D"), cards.parse_hand("9H 8S"), 10, 10),
+    # equal hand, equal length (4)
+    (cards.parse_hand("5H 9S 4C"), cards.parse_hand("10S 5H 3D"), 10, 10)
+
+])
+def test_bet_hand_ONE_ONE(player,dealer,bet,ex):
+    # test cases about payout ord are redundant because that tests compare_hand not bet_hand.
+    assert rules.bet_hand(player,dealer,bet,win_odds=rules.PayoutOrd.ONE_ONE) == ex
+
+@pytest.mark.parametrize("player,dealer,bet,ex", [
+    # player and dealer busts, soft 17. note 9+8==17 (see definition of bust_2) which means the dealer isn't supposed to hit.
+    (hands.hand_bust_1(), hands.hand_bust_2(), 10, 10),
+    # player and dealer bust, more common version
+    (hands.hand_bust_1(), hands.hand_bust_dealer(), 10, 10),
+    # player busts but not dealer, dealer==21.
+    (hands.hand_bust_1(), hands.hand_blackjack_ace_up(), 10, 0), 
+    # player busts and not dealer, dealer==4
+    (hands.hand_bust_1(), hands.hand_2C2D(), 10, 0),
+    # player not bust but dealer bust, player==21
     (hands.hand_blackjack_ace_up(), hands.hand_bust_dealer(), 10, 30),
     # player not bust but dealer bust, player==4
     (hands.hand_2C2D(), hands.hand_bust_dealer(), 10, 30),
@@ -198,9 +242,8 @@ def test_payout_exceptions(payout,bet,exception):
     (cards.parse_hand("5H 9S 4C"), cards.parse_hand("10S 5H 3D"), 10, 10)
 
 ])
-def test_bet_hand(player,dealer,bet,ex):
+def test_bet_hand_TWO_ONE(player,dealer,bet,ex):
     # test cases about payout ord are redundant because that tests compare_hand not bet_hand.
-    # I choose TWO_ONE because it's harder to create false positives and I want to avoid coupling THREE_TWO blackjack winnings
     assert rules.bet_hand(player,dealer,bet,win_odds=rules.PayoutOrd.TWO_ONE) == ex
 
 ## def test_bet_hand_exception()
@@ -297,23 +340,25 @@ def test_init_split(hand,deck,split_ex,deck_ex):
     assert result_split == split_ex
     assert deck == deck_ex
 
-@pytest.mark.parametrize("split,dealer,bet,ex", [
+@pytest.mark.parametrize("split,dealer,bet,ex_winnings", [
     # one hand win vs dealer
-    ([hands.hand_blackjack_ace_down()], hands.hand_2C2D(), 10, 20),
+    ([hands.hand_18_len_2()], hands.hand_2C2D(), 100, 200),
+    # one hand push vs dealer
+    ([hands.hand_17_len_2()], hands.hand_17_len_3(), 100, 100),
     # one hand loss vs dealer
-    ([hands.hand_2C2D()], hands.hand_blackjack_ace_down(), 10, 0),
+    ([hands.hand_2C2D()], hands.hand_blackjack_ace_down(), 100, 0),
     # two hands, both win against dealer.
-    ([hands.hand_18_len_3(), hands.hand_18_len_2()], hands.hand_17_len_3(), 10, 40),
+    ([hands.hand_18_len_3(), hands.hand_18_len_2()], hands.hand_17_len_3(), 200, 400),
     # two hands, left wins against dealer, right pushes.
-    ([hands.hand_18_len_3(), hands.hand_17_len_2()], hands.hand_17_len_3(), 10, 30),
+    ([hands.hand_18_len_3(), hands.hand_17_len_2()], hands.hand_17_len_3(), 200, 300),
     # two hands, left wins against dealer, right loses.
-    ([hands.hand_18_len_3(), cards.parse_hand("JC 6D")], hands.hand_17_len_3(), 10, 20),
+    ([hands.hand_18_len_3(), cards.parse_hand("JC 6D")], hands.hand_17_len_3(), 200, 200),
     # two hands lose against the dealer
-    (2*[hands.hand_2C2D()], hands.hand_17_len_3(), 10, 0),
+    (2*[hands.hand_2C2D()], hands.hand_17_len_3(), 200, 0),
     # order of splits certainly don't matter and probably won't change in future so not testing them.
 ])
-def test_winnings(split,dealer,bet,ex):
-    assert rules.winnings(split,dealer,bet) == ex
+def test_winnings(split,dealer,bet,ex_winnings):
+    assert rules.winnings(split,dealer,bet) == ex_winnings
 
 # /splits
 #######################################################################################

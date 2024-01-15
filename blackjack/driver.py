@@ -123,12 +123,16 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
 
         case GameStage.ASK_SPLIT:
             # note that although I put state.current_hand in the following, it means zero. It's for consistency and development flexibility.
-            if rules.can_split(state.player[state.current_hand]) and ask_want_split():
+            if (rules.can_split(state.player[state.current_hand]) and
+                state.bank - state.bet >= 0 and
+                ask_want_split()):
 
                 # [[Hand]] -> [[Hand], [Hand]]
                 # therefore state.current_hand doesn't change
                 state.player = rules.init_split(state.player[state.current_hand], state.deck)
                 state.stage = GameStage.PLAYER_ACTIONS
+                state.bank -= state.bet
+                state.bet *= 2
 
                 writer(strings.show_player_hand(state))
 
@@ -206,6 +210,7 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
             else:
                 state.bank += rules.winnings(state.player, state.dealer, state.bet)
 
+            state.bet = 0
             state.stage = GameStage.COMPLETE
             writer(strings.show_bank(state))
 
@@ -235,7 +240,7 @@ def driver_io(
         def ask_bank() -> int:
             constraint = io.Constraint().require(int).at_least(constants.MIN_BET)
             return io.input_require(constraint, strings.ask_bank(), strings.ask_bank_fail(), reader, writer)
-        init_state = GameState(GameStage.ASK_BET, make_deck_epoch(), ask_bank(), None, None, None)
+        init_state = GameState(GameStage.ASK_BET, make_deck_epoch(), ask_bank(), None, None, None, None)
 
         while not ext_stop_pred.is_set():
             if len(init_state.deck) <= 13: # this is arbitrary for the moment while other details are realized.
