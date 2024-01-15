@@ -91,9 +91,8 @@ def test_transition_logic_INIT_DEAL_natural():
     ),
     (
         # insurance succeeds. see https://boardgames.stackexchange.com/a/27182
-        # the bet persisting is intentional.
         GameState(GameStage.ASK_INSURANCE, None, 800, 200, None, None, helper_hands.hand_blackjack_ace_up()),
-        GameState(GameStage.COMPLETE, None, 1000, 200, None, None, helper_hands.hand_blackjack_ace_up()),
+        GameState(GameStage.COMPLETE, None, 1000, 0, None, None, helper_hands.hand_blackjack_ace_up()),
         InputMock(["yes"]),
     )
 ])

@@ -116,6 +116,7 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
 
                 if insurance_success:
                     state.bank += payout
+                    state.bet = 0
                     state.stage = GameStage.COMPLETE # this is intentionally not UPDATE_BANK. UPDATE_BANK compares player and dealer cards which insurance doesn't do.
                     writer(strings.show_insurance_success(state))
                 else:
