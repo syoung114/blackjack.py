@@ -14,19 +14,6 @@ from blackjack.rules import PayoutOrd
 from blackjack.exception.StupidProgrammerException import StupidProgrammerException
 from blackjack.strings.StringProvider import StringProvider
 
-def make_deck_epoch():
-    """
-    Makes a 52 random deck seeded by epoch (POSIX time) in milliseconds.
-
-    Impure, obviously
-    """
-    def _epoch_time_ms():
-        return round(time.time() * 1000)
-
-    epoch = _epoch_time_ms()
-    seed = random.Random(epoch)
-    return cards.make_deck_unordered(seed) 
-
 def transition_logic(state : GameState, strings : StringProvider, reader : Callable[..., str], writer : Callable[[str], None]):
     """
     Given a GameStage and related state, returns the updated state according to blackjack logic and user input. Implemented as a state machine/pattern matching.
@@ -128,9 +115,10 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
                 state.bank - state.bet >= 0 and
                 ask_want_split()):
 
-                # [[Hand]] -> [[Hand], [Hand]]
-                # therefore state.current_hand doesn't change
+                # rules.init_split :: [[Hand]] -> [[Hand], [Hand]]
+                # because 0 -> 0 state.current_hand doesn't change
                 state.player = rules.init_split(state.player[state.current_hand], state.deck)
+
                 state.stage = GameStage.PLAYER_ACTIONS
                 state.bank -= state.bet
                 state.bet *= 2
@@ -237,6 +225,15 @@ def driver_io(
     """
     Sort of like main() or a rules.loop. It's the highest level driver of program logic and it creates the I/O side effects concerning user input and display.
     """
+
+    def make_deck_epoch():
+        def _epoch_time_ms():
+            return round(time.time() * 1000)
+    
+        epoch = _epoch_time_ms()
+        seed = random.Random(epoch)
+        return cards.make_deck_unordered(seed) 
+
     try:
         def ask_bank() -> int:
             constraint = io.Constraint().require(int).at_least(constants.MIN_BET)
