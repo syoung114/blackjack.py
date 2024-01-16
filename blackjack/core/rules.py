@@ -4,11 +4,11 @@ from typing import List
 from enum import Enum
 from math import floor
 
-from blackjack import constants
-from blackjack import cards
+from blackjack.core import constants
+from blackjack.core import cards
 
-from blackjack.cards import Hand, Deck, Rank
-from blackjack.exception.StupidProgrammerException import StupidProgrammerException
+from blackjack.core.cards import Hand, Deck, Rank
+from blackjack.core.exception.StupidProgrammerException import StupidProgrammerException
 
 class Ordinal(Enum):
     LT = -1

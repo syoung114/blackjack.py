@@ -5,14 +5,14 @@ import pytest
 
 from copy import deepcopy
 
-from blackjack import driver
-from blackjack.state import GameStage, GameState
-from blackjack.cards import parse_hand
+from blackjack.core import driver
+from blackjack.core.state import GameStage, GameState
+from blackjack.core.cards import parse_hand
 
-from tests.test_io import PrintMock, InputMock, print_stub
-from tests.fixtures_cards import fix_deck_alphabetical_52
-from tests.TestStrings import TestStrings
-from tests import helper_hands
+from tests.core.test_io import PrintMock, InputMock, print_stub
+from tests.core.fixtures_cards import fix_deck_alphabetical_52
+from tests.core.TestStrings import TestStrings
+from tests.core import helper_hands
 
 def test_transition_logic_ASK_BET(fix_deck_alphabetical_52):
 

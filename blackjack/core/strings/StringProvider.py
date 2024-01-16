@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from blackjack.state import GameState
-from blackjack.cards import Hand
+from blackjack.core.state import GameState
+from blackjack.core.cards import Hand
 
 class StringProvider(ABC):
     """

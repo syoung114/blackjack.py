@@ -1,7 +1,7 @@
 def main():
     from threading import Event
-    from blackjack.strings.StubStrings import StubStrings
-    import blackjack.driver as driver
+    from blackjack.core.strings.StubStrings import StubStrings
+    from blackjack.core import driver
     driver.driver_io(Event(), StubStrings())
 
 if __name__ == "__main__":

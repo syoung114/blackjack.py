@@ -1,31 +1,28 @@
-from functools import singledispatch
-from .StringProvider import StringProvider
+from blackjack.core.strings.StringProvider import StringProvider
+from blackjack.core.state import GameState, Hand
 
-from blackjack.state import GameState, Hand
-from blackjack.rules import hand_value
-
-class StubStrings(StringProvider):
+class TestStrings(StringProvider):
     """
-    Not pretty but usable contextual strings.
+    Empty strings for when printing is irrelevant, like testing.
     """
 
 # ask methods -- these are prompts given when asking for input
 
     @staticmethod
     def ask_generic_fail(state : GameState):
-        return "ask_generic_fail"
+        return ""
 
     @staticmethod
     def ask_bank():
-        return "ask_bank"
+        return ""
 
     @staticmethod
     def ask_bank_fail():
-        return "ask_bank_fail"
+        return ""
 
     @staticmethod
     def ask_bet(state : GameState):
-        return "ask_bet"
+        return ""
 
     #@staticmethod
     #def ask_bet_fail(state : GameState):
@@ -33,15 +30,15 @@ class StubStrings(StringProvider):
 
     @staticmethod
     def ask_insurance(state : GameState):
-        return "ask_insurance"
+        return ""
 
     @staticmethod
     def show_insurance_fail(state : GameState):
-        return "insurance_fail"
+        return ""
 
     @staticmethod
     def ask_split(state : GameState):
-        return "ask_split"
+        return ""
 
     #@staticmethod
     #def ask_split_fail(state : GameState):
@@ -49,11 +46,11 @@ class StubStrings(StringProvider):
 
     @staticmethod
     def ask_hit(state : GameState):
-        return "ask_hit"
+        return ""
 
     @staticmethod
     def ask_stay(state : GameState):
-        return "ask_stay"
+        return ""
 
     @staticmethod
     def ask_hit_stay(state : GameState):
@@ -94,35 +91,23 @@ class StubStrings(StringProvider):
 
     @staticmethod
     def show_player_hand(state_or_hand):
-        @singledispatch
-        def fn(hand : Hand):
-            is_split = isinstance(hand, list)
-            if is_split:
-                return "\nplayer:".join(map(str, hand))
-            else:
-                return "player:" + str(hand)
-
-        @fn.register(GameState)
-        def _(state : GameState):
-            return fn(state.player)
-
-        return fn(state_or_hand)
+        return ""
 
     @staticmethod
     def show_dealer_hand_down(state : GameState):
-        return "dealer:" + str(state.dealer[0])
+        return ""
 
     @staticmethod
     def show_dealer_hand_up(state : GameState):
-        return "dealer:" + str(state.dealer)
+        return ""
 
     @staticmethod
     def show_bust(hand : Hand):
-        return f"show_bust: {hand}"
+        return ""
 
     @staticmethod
     def show_insurance_success(state : GameState):
-        return "show_insurance_success"
+        return ""
 
     #@staticmethod
     #def show_insurance_fail(state : GameState):
@@ -130,21 +115,21 @@ class StubStrings(StringProvider):
 
     @staticmethod
     def show_bank(state : GameState):
-        return f"${state.bank}"
+        return ""
 
     @staticmethod
     def show_player_blackjack(state : GameState):
-        return "blackjack"
+        return ""
 
     @staticmethod
     def show_max_hand(state : GameState):
-        return "MAX HAND 21"
+        return ""
 
     @staticmethod
     def show_shuffling(state : GameState):
-        return "SHUFFLING..."
+        return ""
 
     #@staticmethod
     #def show_keyboard_interrupt(state : GameState):
     #    # it's safe to assume that this will be the standard library default (as below) or ""
-    #    return "KeyboardInterrupt"
+    #    return ""

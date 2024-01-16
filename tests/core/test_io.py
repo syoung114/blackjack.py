@@ -2,9 +2,9 @@ from enum import Enum
 from typing import Callable, List
 import queue
 
-from blackjack import io
+from blackjack.core import io
 
-from tests.mocks_io import IOQueue, PrintMock, InputMock, print_stub
+from tests.core.mocks_io import IOQueue, PrintMock, InputMock, print_stub
 
 class InputRequireString(Enum):
     PROMPT = "prompt"

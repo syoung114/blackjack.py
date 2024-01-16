@@ -7,12 +7,12 @@ import random
 from typing import Callable
 from dataclasses import fields
 
-from blackjack import constants, rules, cards, io
+from blackjack.core import constants, rules, cards, io
 
-from blackjack.state import GameState, GameStage
-from blackjack.rules import PayoutOrd
-from blackjack.exception.StupidProgrammerException import StupidProgrammerException
-from blackjack.strings.StringProvider import StringProvider
+from blackjack.core.state import GameState, GameStage
+from blackjack.core.rules import PayoutOrd
+from blackjack.core.exception.StupidProgrammerException import StupidProgrammerException
+from blackjack.core.strings.StringProvider import StringProvider
 
 def transition_logic(state : GameState, strings : StringProvider, reader : Callable[..., str], writer : Callable[[str], None]):
     """

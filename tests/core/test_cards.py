@@ -2,14 +2,13 @@ import pytest
 import random
 from copy import deepcopy
 
-import blackjack.constants as constants
-import blackjack.cards as cards
+from blackjack.core import cards, constants
+from blackjack.core.cards import Card, Rank, Suit
 
-import tests.helper_hands as hands
-from tests.fixtures_cards import *
+from tests.core import helper_hands
+from tests.core.fixtures_cards import *
 #import tests.fixtures_cards as fixtures_cards
 
-from blackjack.cards import Card, Rank, Suit
 
 # /imports
 ########################################################################################
@@ -17,25 +16,25 @@ from blackjack.cards import Card, Rank, Suit
 
 @pytest.mark.parametrize("raw,ex", [
     # one card gives a hand of the same card
-    ("2C", hands.hand_2C()),
+    ("2C", helper_hands.hand_2C()),
     # two identical cards. invalid in blackjack but not this function's concern
     ("2C2C", [Card(Rank.TWO, Suit.CLUB), Card(Rank.TWO, Suit.CLUB)]),
     # four cards over all suits
     ("2C3D4H5S", [Card(Rank.TWO, Suit.CLUB), Card(Rank.THREE, Suit.DIAMOND), Card(Rank.FOUR, Suit.HEART), Card(Rank.FIVE, Suit.SPADE)]),
     # low hand
-    ("2C2D", hands.hand_2C2D()),
+    ("2C2D", helper_hands.hand_2C2D()),
     # high hand
     ("10CJC", [Card(Rank.TEN, Suit.CLUB), Card(Rank.JACK, Suit.CLUB)]),
     # natural/blackjack example
-    ("ACJC", hands.hand_blackjack_ace_up()),
+    ("ACJC", helper_hands.hand_blackjack_ace_up()),
     # arbitrary delimiter
-    ("2C 2D", hands.hand_2C2D()),
+    ("2C 2D", helper_hands.hand_2C2D()),
     # valid interleave
-    ("22C", hands.hand_2C()),
+    ("22C", helper_hands.hand_2C()),
     # invalid interleave
-    ("2|C", hands.hand_empty()),
+    ("2|C", helper_hands.hand_empty()),
     # empty string
-    ("", hands.hand_empty())
+    ("", helper_hands.hand_empty())
 ])
 def test_parse_hand(raw, ex):
     # a lot of tests depend on this function (because manually defining a card through Card tuple is painful) so it's important to get right.
@@ -83,15 +82,15 @@ def test_make_deck_unordered(fix_rseed_zero_deck):
 
 @pytest.mark.parametrize("hand,deck,hex,dex", [
     # empty hand, deck has one card -> transfers that card over
-    (hands.hand_empty(), hands.hand_2C(), hands.hand_2C(),hands.hand_empty()),
+    (helper_hands.hand_empty(), helper_hands.hand_2C(), helper_hands.hand_2C(),helper_hands.hand_empty()),
     # empty hand, deck has two cards -> last card is inserted into hand
-    (hands.hand_empty(), hands.hand_2C2D(), hands.hand_2D(), hands.hand_2C()),
+    (helper_hands.hand_empty(), helper_hands.hand_2C2D(), helper_hands.hand_2D(), helper_hands.hand_2C()),
     # hand has one card, deck has one card -> hand has two cards, deck has none
-    (hands.hand_2C(), hands.hand_2D(), hands.hand_2C2D(), hands.hand_empty()),
+    (helper_hands.hand_2C(), helper_hands.hand_2D(), helper_hands.hand_2C2D(), helper_hands.hand_empty()),
     # hand has two cards, deck has one card -> hand has three cards, deck has none
-    (hands.hand_2C2D(), hands.hand_2H(), hands.hand_2C2D() + hands.hand_2H(), hands.hand_empty()),
+    (helper_hands.hand_2C2D(), helper_hands.hand_2H(), helper_hands.hand_2C2D() + helper_hands.hand_2H(), helper_hands.hand_empty()),
     # hand has one card, deck has two cards -> hand has two cards, deck has two cards
-    (hands.hand_2C(), hands.hand_2D() + hands.hand_2H(), hands.hand_2C() + hands.hand_2H(), hands.hand_2D())
+    (helper_hands.hand_2C(), helper_hands.hand_2D() + helper_hands.hand_2H(), helper_hands.hand_2C() + helper_hands.hand_2H(), helper_hands.hand_2D())
 ])
 def test_take_card(hand, deck, hex, dex):
     cards.take_card(hand, deck)
@@ -99,8 +98,8 @@ def test_take_card(hand, deck, hex, dex):
     assert list(deck) == list(dex)
 
 @pytest.mark.parametrize("hand,deck,exception", [
-    (hands.hand_empty(), hands.hand_empty(), IndexError),
-    (hands.hand_2C(), hands.hand_empty(), IndexError)
+    (helper_hands.hand_empty(), helper_hands.hand_empty(), IndexError),
+    (helper_hands.hand_2C(), helper_hands.hand_empty(), IndexError)
 ])
 def test_take_card_exceptions(hand,deck,exception):
     with pytest.raises(exception):
@@ -108,7 +107,7 @@ def test_take_card_exceptions(hand,deck,exception):
 
 def test_take_card_entire_deck(fix_deck_alphabetical_52):
     original = deepcopy(fix_deck_alphabetical_52)
-    hand = hands.hand_empty()
+    hand = helper_hands.hand_empty()
     i = 0
     while fix_deck_alphabetical_52:
         if i > len(original):

@@ -2,7 +2,7 @@ from enum import Enum
 from typing import List
 from dataclasses import dataclass
 
-from blackjack.cards import Deck, Hand
+from blackjack.core.cards import Deck, Hand
 
 class GameStage(Enum):
     ASK_BET = 0

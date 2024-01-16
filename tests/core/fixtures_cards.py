@@ -1,6 +1,6 @@
 import pytest
 
-from blackjack.cards import Card, Rank, Suit
+from blackjack.core.cards import Card, Rank, Suit
 
 @pytest.fixture
 def fix_rseed_zero_deck():

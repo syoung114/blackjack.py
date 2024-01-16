@@ -1,11 +1,11 @@
-from blackjack.cards import parse_hand
-from blackjack.driver import transition_logic
-from blackjack.state import GameStage, GameState
-from tests import helper_hands
+from blackjack.core.cards import parse_hand
+from blackjack.core.driver import transition_logic
+from blackjack.core.state import GameStage, GameState
+from tests.core import helper_hands
 
-from tests.TestStrings import TestStrings
-from tests.mocks_io import InputMock, print_stub
-from tests.test_io import InputRequireString
+from tests.core.TestStrings import TestStrings
+from tests.core.mocks_io import InputMock, print_stub
+from tests.core.test_io import InputRequireString
 
 #########
 

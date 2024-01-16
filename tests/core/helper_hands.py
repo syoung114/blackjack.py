@@ -1,4 +1,4 @@
-from blackjack.cards import Card, Rank, Suit
+from blackjack.core.cards import Card, Rank, Suit
 
 # TODO might be interesting to change these values (as long as they have same length and value) and see if any tests fail. In fact, you could write a script that generates these helper functions.
 

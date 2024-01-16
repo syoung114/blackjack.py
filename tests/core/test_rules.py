@@ -1,16 +1,14 @@
 from copy import deepcopy
 import pytest
 
-from blackjack import constants
+from blackjack.core import constants
 
-from blackjack.exception.StupidProgrammerException import StupidProgrammerException
+from blackjack.core.exception.StupidProgrammerException import StupidProgrammerException
 
-import blackjack.rules as rules
-import blackjack.cards as cards
+from blackjack.core import rules, cards
 
-import tests.helper_hands as hands
-
-from tests.fixtures_cards import *
+from tests.core import helper_hands
+from tests.core.fixtures_cards import *
 
 # /imports
 #######################################################################################
@@ -39,7 +37,7 @@ def test_compare(a, b, ex):
 
 @pytest.mark.parametrize("hand,ex", [
     # really low hand, no aces
-    (hands.hand_2C2D(), 4),
+    (helper_hands.hand_2C2D(), 4),
     # another hand, no aces. fibonacci for no reason.
     (cards.parse_hand("3C 5D 8H"), 16),
     # same hand as before but reversed.
@@ -65,11 +63,11 @@ def test_compare(a, b, ex):
     # 21 without any aces 2
     (cards.parse_hand("10C 3D 3H 5S"), 21),
     # natural/blackjack 1
-    (hands.hand_blackjack_ace_up(), 21),
+    (helper_hands.hand_blackjack_ace_up(), 21),
     # natural/blackjack 2
-    (hands.hand_blackjack_ace_down(), 21),
+    (helper_hands.hand_blackjack_ace_down(), 21),
     # various cards with one ace
-    (hands.hand_2C2D() + cards.parse_hand("AH"), 15),
+    (helper_hands.hand_2C2D() + cards.parse_hand("AH"), 15),
     # two aces
     (cards.parse_hand("AC AD"), 12),
     # two aces and a lower card
@@ -83,7 +81,7 @@ def test_compare(a, b, ex):
     # most cards without busting, plus another card
     (cards.parse_hand("AC AD AH AS 2C 2D 2H 2S 3C 3D 3H 3S"), 24),
     # empty hand
-    (hands.hand_empty(), 0)
+    (helper_hands.hand_empty(), 0)
 ])
 def test_hand_value(hand,ex):
     assert rules.hand_value(hand) == ex
@@ -94,38 +92,38 @@ def test_hand_value_whole_deck(fix_deck_alphabetical_52):
 
 @pytest.mark.parametrize("lhand,rhand,ex", [
     # identical low card
-    (hands.hand_2H(), hands.hand_2H(), rules.Ordinal.EQ),
+    (helper_hands.hand_2H(), helper_hands.hand_2H(), rules.Ordinal.EQ),
     # different suit
-    (hands.hand_2H(), hands.hand_2D(), rules.Ordinal.EQ),
+    (helper_hands.hand_2H(), helper_hands.hand_2D(), rules.Ordinal.EQ),
     # two cards each
-    (hands.hand_2C2D(), hands.hand_2C2D(), rules.Ordinal.EQ),
+    (helper_hands.hand_2C2D(), helper_hands.hand_2C2D(), rules.Ordinal.EQ),
     # lhand < rhand, different lengths
-    (hands.hand_2H(), hands.hand_2C2D(), rules.Ordinal.LT),
+    (helper_hands.hand_2H(), helper_hands.hand_2C2D(), rules.Ordinal.LT),
     # inverse of previous
-    (hands.hand_2C2D(), hands.hand_2H(), rules.Ordinal.GT),
+    (helper_hands.hand_2C2D(), helper_hands.hand_2H(), rules.Ordinal.GT),
     # natural 21 vs regular 21
-    (hands.hand_blackjack_ace_up(), cards.parse_hand("7C 7D 7H"), rules.Ordinal.EQ),
+    (helper_hands.hand_blackjack_ace_up(), cards.parse_hand("7C 7D 7H"), rules.Ordinal.EQ),
     # natural 21 vs most cards without bust
-    (hands.hand_blackjack_ace_up(), cards.parse_hand("AC AD AH AS 2C 2D 2H 2S 3C 3D 3H"), rules.Ordinal.EQ),
+    (helper_hands.hand_blackjack_ace_up(), cards.parse_hand("AC AD AH AS 2C 2D 2H 2S 3C 3D 3H"), rules.Ordinal.EQ),
     # blackjack vs blackjack
-    (hands.hand_blackjack_ace_up(), hands.hand_blackjack_ace_down(), rules.Ordinal.EQ),
+    (helper_hands.hand_blackjack_ace_up(), helper_hands.hand_blackjack_ace_down(), rules.Ordinal.EQ),
     # single ace vs 2
-    (cards.parse_hand("AC"), hands.hand_2H(), rules.Ordinal.GT),
+    (cards.parse_hand("AC"), helper_hands.hand_2H(), rules.Ordinal.GT),
     # single ace vs 10
     (cards.parse_hand("AC"), cards.parse_hand("10C"), rules.Ordinal.GT),
     # single ace vs unnatural 11
     (cards.parse_hand("AC"), cards.parse_hand("2C 9C"), rules.Ordinal.EQ),
     # both empty
-    (hands.hand_empty(), hands.hand_empty(), rules.Ordinal.EQ)
+    (helper_hands.hand_empty(), helper_hands.hand_empty(), rules.Ordinal.EQ)
 ])
 def test_compare_hand(lhand, rhand, ex):
     assert rules.compare_hand(lhand,rhand) == ex
 
 def test_compare_hand_extreme_gt(fix_deck_alphabetical_52):
-    assert rules.compare_hand(fix_deck_alphabetical_52, hands.hand_2C()) == rules.Ordinal.GT
+    assert rules.compare_hand(fix_deck_alphabetical_52, helper_hands.hand_2C()) == rules.Ordinal.GT
 
 def test_compare_hand_extreme_lt(fix_deck_alphabetical_52):
-    assert rules.compare_hand(hands.hand_2C(), fix_deck_alphabetical_52) == rules.Ordinal.LT
+    assert rules.compare_hand(helper_hands.hand_2C(), fix_deck_alphabetical_52) == rules.Ordinal.LT
 
 # /hand_value
 #######################################################################################
@@ -160,38 +158,38 @@ def test_payout_exceptions(payout,bet,exception):
 
 @pytest.mark.parametrize("player,dealer,bet,ex", [
     # player and dealer busts, soft 17. note 9+8==17 (see definition of bust_2) which means the dealer isn't supposed to hit.
-    (hands.hand_bust_1(), hands.hand_bust_2(), 10, 10),
+    (helper_hands.hand_bust_1(), helper_hands.hand_bust_2(), 10, 10),
     # player and dealer bust, more common version
-    (hands.hand_bust_1(), hands.hand_bust_dealer(), 10, 10),
+    (helper_hands.hand_bust_1(), helper_hands.hand_bust_dealer(), 10, 10),
     # player busts but not dealer, dealer==21.
-    (hands.hand_bust_1(), hands.hand_blackjack_ace_up(), 10, 0), 
+    (helper_hands.hand_bust_1(), helper_hands.hand_blackjack_ace_up(), 10, 0), 
     # player busts and not dealer, dealer==4
-    (hands.hand_bust_1(), hands.hand_2C2D(), 10, 0),
+    (helper_hands.hand_bust_1(), helper_hands.hand_2C2D(), 10, 0),
     # player not bust but dealer bust, player==21
-    (hands.hand_blackjack_ace_up(), hands.hand_bust_dealer(), 10, 20),
+    (helper_hands.hand_blackjack_ace_up(), helper_hands.hand_bust_dealer(), 10, 20),
     # player not bust but dealer bust, player==4
-    (hands.hand_2C2D(), hands.hand_bust_dealer(), 10, 20),
+    (helper_hands.hand_2C2D(), helper_hands.hand_bust_dealer(), 10, 20),
     # the following is for neither bust...
     # greater hand, equal lengths
-    (hands.hand_18_len_2(), hands.hand_17_len_2(), 10, 20),
+    (helper_hands.hand_18_len_2(), helper_hands.hand_17_len_2(), 10, 20),
     # greater hand, equal length (2)
-    (hands.hand_blackjack_ace_up(), cards.parse_hand("QC 10D"), 10, 20),
+    (helper_hands.hand_blackjack_ace_up(), cards.parse_hand("QC 10D"), 10, 20),
     # greater hand, greater length
-    (cards.parse_hand("2C 2D 2H 2S 3C 3D 3H AS"), hands.hand_17_len_2(), 10, 20),
+    (cards.parse_hand("2C 2D 2H 2S 3C 3D 3H AS"), helper_hands.hand_17_len_2(), 10, 20),
     # greater hand, smaller length
-    (hands.hand_18_len_2(), hands.hand_17_len_3(), 10, 20),
+    (helper_hands.hand_18_len_2(), helper_hands.hand_17_len_3(), 10, 20),
     # lesser hand, equal lengths
-    (hands.hand_17_len_2(), hands.hand_18_len_2(), 10, 0),
+    (helper_hands.hand_17_len_2(), helper_hands.hand_18_len_2(), 10, 0),
     # lesser hand, equal length (2)
-    (cards.parse_hand("QC 10D"), hands.hand_blackjack_ace_down(), 10, 0),
+    (cards.parse_hand("QC 10D"), helper_hands.hand_blackjack_ace_down(), 10, 0),
     # lesser hand, greater length
-    (hands.hand_17_len_3(), hands.hand_18_len_2(), 10, 0),
+    (helper_hands.hand_17_len_3(), helper_hands.hand_18_len_2(), 10, 0),
     # lesser hand, smaller length
-    (hands.hand_17_len_2(), hands.hand_18_len_3(), 10, 0),
+    (helper_hands.hand_17_len_2(), helper_hands.hand_18_len_3(), 10, 0),
     # equal hand, equal length (1)
-    (hands.hand_blackjack_ace_up(), hands.hand_blackjack_ace_down(), 10, 10),
+    (helper_hands.hand_blackjack_ace_up(), helper_hands.hand_blackjack_ace_down(), 10, 10),
     # equal hand, equal length (2)
-    (hands.hand_blackjack_ace_down(), hands.hand_blackjack_ace_up(), 10, 10),
+    (helper_hands.hand_blackjack_ace_down(), helper_hands.hand_blackjack_ace_up(), 10, 10),
     # equal hand, equal length (3)
     (cards.parse_hand("10C 7D"), cards.parse_hand("9H 8S"), 10, 10),
     # equal hand, equal length (4)
@@ -204,38 +202,38 @@ def test_bet_hand_ONE_ONE(player,dealer,bet,ex):
 
 @pytest.mark.parametrize("player,dealer,bet,ex", [
     # player and dealer busts, soft 17. note 9+8==17 (see definition of bust_2) which means the dealer isn't supposed to hit.
-    (hands.hand_bust_1(), hands.hand_bust_2(), 10, 10),
+    (helper_hands.hand_bust_1(), helper_hands.hand_bust_2(), 10, 10),
     # player and dealer bust, more common version
-    (hands.hand_bust_1(), hands.hand_bust_dealer(), 10, 10),
+    (helper_hands.hand_bust_1(), helper_hands.hand_bust_dealer(), 10, 10),
     # player busts but not dealer, dealer==21.
-    (hands.hand_bust_1(), hands.hand_blackjack_ace_up(), 10, 0), 
+    (helper_hands.hand_bust_1(), helper_hands.hand_blackjack_ace_up(), 10, 0), 
     # player busts and not dealer, dealer==4
-    (hands.hand_bust_1(), hands.hand_2C2D(), 10, 0),
+    (helper_hands.hand_bust_1(), helper_hands.hand_2C2D(), 10, 0),
     # player not bust but dealer bust, player==21
-    (hands.hand_blackjack_ace_up(), hands.hand_bust_dealer(), 10, 30),
+    (helper_hands.hand_blackjack_ace_up(), helper_hands.hand_bust_dealer(), 10, 30),
     # player not bust but dealer bust, player==4
-    (hands.hand_2C2D(), hands.hand_bust_dealer(), 10, 30),
+    (helper_hands.hand_2C2D(), helper_hands.hand_bust_dealer(), 10, 30),
     # the following is for neither bust...
     # greater hand, equal lengths
-    (hands.hand_18_len_2(), hands.hand_17_len_2(), 10, 30),
+    (helper_hands.hand_18_len_2(), helper_hands.hand_17_len_2(), 10, 30),
     # greater hand, equal length (2)
-    (hands.hand_blackjack_ace_up(), cards.parse_hand("QC 10D"), 10, 30),
+    (helper_hands.hand_blackjack_ace_up(), cards.parse_hand("QC 10D"), 10, 30),
     # greater hand, greater length
-    (cards.parse_hand("2C 2D 2H 2S 3C 3D 3H AS"), hands.hand_17_len_2(), 10, 30),
+    (cards.parse_hand("2C 2D 2H 2S 3C 3D 3H AS"), helper_hands.hand_17_len_2(), 10, 30),
     # greater hand, smaller length
-    (hands.hand_18_len_2(), hands.hand_17_len_3(), 10, 30),
+    (helper_hands.hand_18_len_2(), helper_hands.hand_17_len_3(), 10, 30),
     # lesser hand, equal lengths
-    (hands.hand_17_len_2(), hands.hand_18_len_2(), 10, 0),
+    (helper_hands.hand_17_len_2(), helper_hands.hand_18_len_2(), 10, 0),
     # lesser hand, equal length (2)
-    (cards.parse_hand("QC 10D"), hands.hand_blackjack_ace_down(), 10, 0),
+    (cards.parse_hand("QC 10D"), helper_hands.hand_blackjack_ace_down(), 10, 0),
     # lesser hand, greater length
-    (hands.hand_17_len_3(), hands.hand_18_len_2(), 10, 0),
+    (helper_hands.hand_17_len_3(), helper_hands.hand_18_len_2(), 10, 0),
     # lesser hand, smaller length
-    (hands.hand_17_len_2(), hands.hand_18_len_3(), 10, 0),
+    (helper_hands.hand_17_len_2(), helper_hands.hand_18_len_3(), 10, 0),
     # equal hand, equal length (1)
-    (hands.hand_blackjack_ace_up(), hands.hand_blackjack_ace_down(), 10, 10),
+    (helper_hands.hand_blackjack_ace_up(), helper_hands.hand_blackjack_ace_down(), 10, 10),
     # equal hand, equal length (2)
-    (hands.hand_blackjack_ace_down(), hands.hand_blackjack_ace_up(), 10, 10),
+    (helper_hands.hand_blackjack_ace_down(), helper_hands.hand_blackjack_ace_up(), 10, 10),
     # equal hand, equal length (3)
     (cards.parse_hand("10C 7D"), cards.parse_hand("9H 8S"), 10, 10),
     # equal hand, equal length (4)
@@ -255,12 +253,12 @@ def test_bet_hand_TWO_ONE(player,dealer,bet,ex):
 # general values
 
 @pytest.mark.parametrize("hand,ex", [
-    (hands.hand_blackjack_ace_up(), True),
-    (hands.hand_blackjack_ace_down(), True),
+    (helper_hands.hand_blackjack_ace_up(), True),
+    (helper_hands.hand_blackjack_ace_down(), True),
     # 21 but not natural
     (cards.parse_hand("10C 8D 3H"), False),
     # initial_hand size
-    (hands.hand_2C2D(), False),
+    (helper_hands.hand_2C2D(), False),
     (cards.parse_hand("AC AD"), False),
     #impossible to bust on initial hand
 ])
@@ -268,14 +266,14 @@ def test_is_natural(hand,ex):
     assert rules.is_natural(hand) == ex
 
 @pytest.mark.parametrize("hand,ex", [
-    (hands.hand_blackjack_ace_up(), True),
-    (hands.hand_blackjack_ace_down(), True),
+    (helper_hands.hand_blackjack_ace_up(), True),
+    (helper_hands.hand_blackjack_ace_down(), True),
     # 21 but not natural
     (cards.parse_hand("10C 8D 3H"), True),
     # initial_hand size
-    (hands.hand_2C2D(), False),
+    (helper_hands.hand_2C2D(), False),
     # 22 bust
-    (hands.hand_17_len_3() + cards.parse_hand("5S"), False),
+    (helper_hands.hand_17_len_3() + cards.parse_hand("5S"), False),
 ])
 def test_is_max(hand,ex):
     assert rules.is_max(hand) == ex
@@ -284,11 +282,11 @@ def test_is_max(hand,ex):
 # insurance
 
 @pytest.mark.parametrize("hand,ex", [
-    (hands.hand_blackjack_ace_down(), False),
-    (hands.hand_blackjack_ace_up(), True),
+    (helper_hands.hand_blackjack_ace_down(), False),
+    (helper_hands.hand_blackjack_ace_up(), True),
     (cards.parse_hand("AC 2D"), True),
     (cards.parse_hand("2C AD"), False),
-    (hands.hand_2C2D(), False), # some hand with no aces.
+    (helper_hands.hand_2C2D(), False), # some hand with no aces.
     (cards.parse_hand("10C 8D 3H"), False), # this is a 21. dealer doesn't have three cards but good test nonetheless.
     (cards.parse_hand("AC"), True) # probably should be undefined but whatever
 ])
@@ -296,11 +294,11 @@ def test_is_insurable(hand,ex):
     assert rules.is_insurable(hand) == ex
 
 @pytest.mark.parametrize("hand,bet,ex1,ex2", [
-    (hands.hand_blackjack_ace_up(), 10, True, 30),
+    (helper_hands.hand_blackjack_ace_up(), 10, True, 30),
     (cards.parse_hand("AC2D"), 10, False, 0),
     # the following aren't insurable in blackjack but it's defined behavior in the function.
-    (hands.hand_blackjack_ace_down(), 10, True, 30),
-    (hands.hand_2C2D(), 10, False, 0),
+    (helper_hands.hand_blackjack_ace_down(), 10, True, 30),
+    (helper_hands.hand_2C2D(), 10, False, 0),
 ])
 def test_insure(hand,bet,ex1,ex2):
     result_success, result_winnings = rules.insure(hand,bet)
@@ -320,7 +318,7 @@ def test_insurance_make_side_bet(bet,ex):
 # splits
 
 @pytest.mark.parametrize("hand,ex", [
-    (hands.hand_2C2D(), True),
+    (helper_hands.hand_2C2D(), True),
     (cards.parse_hand("2C3D"), False),
     (cards.parse_hand("10C JC"), False),
     (cards.parse_hand("JC QC"), False),
@@ -329,11 +327,11 @@ def test_can_split(hand,ex):
     assert rules.can_split(hand) == ex
 
 @pytest.mark.parametrize("hand,deck,split_ex,deck_ex", [
-    (cards.parse_hand("ACAD"), cards.parse_hand("2C3D"), [cards.parse_hand("AC3D"), cards.parse_hand("AD2C")], hands.hand_empty()),
+    (cards.parse_hand("ACAD"), cards.parse_hand("2C3D"), [cards.parse_hand("AC3D"), cards.parse_hand("AD2C")], helper_hands.hand_empty()),
     # spliting a hand reveals a hand which also is splitable. splitting again is not allowed.
-    (hands.hand_2C2D(), cards.parse_hand("2SKS2H"), [cards.parse_hand("2C2H"), cards.parse_hand("2DKS")], cards.parse_hand("2S")),
+    (helper_hands.hand_2C2D(), cards.parse_hand("2SKS2H"), [cards.parse_hand("2C2H"), cards.parse_hand("2DKS")], cards.parse_hand("2S")),
     # this hand can't be split but it's defined behavior anyway
-    (cards.parse_hand("2H3S"), cards.parse_hand("2C3D"), [cards.parse_hand("2H3D"), cards.parse_hand("3S2C")], hands.hand_empty()),
+    (cards.parse_hand("2H3S"), cards.parse_hand("2C3D"), [cards.parse_hand("2H3D"), cards.parse_hand("3S2C")], helper_hands.hand_empty()),
 ])
 def test_init_split(hand,deck,split_ex,deck_ex):
     result_split = rules.init_split(hand,deck)
@@ -342,19 +340,19 @@ def test_init_split(hand,deck,split_ex,deck_ex):
 
 @pytest.mark.parametrize("split,dealer,bet,ex_winnings", [
     # one hand win vs dealer
-    ([hands.hand_18_len_2()], hands.hand_2C2D(), 100, 200),
+    ([helper_hands.hand_18_len_2()], helper_hands.hand_2C2D(), 100, 200),
     # one hand push vs dealer
-    ([hands.hand_17_len_2()], hands.hand_17_len_3(), 100, 100),
+    ([helper_hands.hand_17_len_2()], helper_hands.hand_17_len_3(), 100, 100),
     # one hand loss vs dealer
-    ([hands.hand_2C2D()], hands.hand_blackjack_ace_down(), 100, 0),
+    ([helper_hands.hand_2C2D()], helper_hands.hand_blackjack_ace_down(), 100, 0),
     # two hands, both win against dealer.
-    ([hands.hand_18_len_3(), hands.hand_18_len_2()], hands.hand_17_len_3(), 200, 400),
+    ([helper_hands.hand_18_len_3(), helper_hands.hand_18_len_2()], helper_hands.hand_17_len_3(), 200, 400),
     # two hands, left wins against dealer, right pushes.
-    ([hands.hand_18_len_3(), hands.hand_17_len_2()], hands.hand_17_len_3(), 200, 300),
+    ([helper_hands.hand_18_len_3(), helper_hands.hand_17_len_2()], helper_hands.hand_17_len_3(), 200, 300),
     # two hands, left wins against dealer, right loses.
-    ([hands.hand_18_len_3(), cards.parse_hand("JC 6D")], hands.hand_17_len_3(), 200, 200),
+    ([helper_hands.hand_18_len_3(), cards.parse_hand("JC 6D")], helper_hands.hand_17_len_3(), 200, 200),
     # two hands lose against the dealer
-    (2*[hands.hand_2C2D()], hands.hand_17_len_3(), 200, 0),
+    (2*[helper_hands.hand_2C2D()], helper_hands.hand_17_len_3(), 200, 0),
     # order of splits certainly don't matter and probably won't change in future so not testing them.
 ])
 def test_winnings(split,dealer,bet,ex_winnings):
@@ -366,12 +364,12 @@ def test_winnings(split,dealer,bet,ex_winnings):
 
 @pytest.mark.parametrize("dealer,deck,dealer_ex,deck_ex", [
     # natural. nothing changes.
-    (hands.hand_blackjack_ace_down(), hands.hand_2C2D(), hands.hand_blackjack_ace_down(), hands.hand_2C2D()),
-    (hands.hand_blackjack_ace_up(), hands.hand_2C2D(), hands.hand_blackjack_ace_up(), hands.hand_2C2D()),
+    (helper_hands.hand_blackjack_ace_down(), helper_hands.hand_2C2D(), helper_hands.hand_blackjack_ace_down(), helper_hands.hand_2C2D()),
+    (helper_hands.hand_blackjack_ace_up(), helper_hands.hand_2C2D(), helper_hands.hand_blackjack_ace_up(), helper_hands.hand_2C2D()),
     # abnormal amount of aces. only the aces after the first get compressed, which give seven.
-    (hands.hand_empty(), 7*cards.parse_hand("AC"), 7*cards.parse_hand("AC"), hands.hand_empty()),
+    (helper_hands.hand_empty(), 7*cards.parse_hand("AC"), 7*cards.parse_hand("AC"), helper_hands.hand_empty()),
     # lots of cards starting from 2
-    (hands.hand_2C2D(), cards.parse_hand("2H 2S 3C 3D 3H 3S 4C")[::-1], cards.parse_hand("2C 2D 2H 2S 3C 3D 3H"), cards.parse_hand("4C 3S")),
+    (helper_hands.hand_2C2D(), cards.parse_hand("2H 2S 3C 3D 3H 3S 4C")[::-1], cards.parse_hand("2C 2D 2H 2S 3C 3D 3H"), cards.parse_hand("4C 3S")),
 ])
 def test_dealer_play(dealer,deck,dealer_ex,deck_ex):
     rules.dealer_play(dealer,deck)
