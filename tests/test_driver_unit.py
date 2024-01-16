@@ -45,7 +45,7 @@ def test_transition_logic_INIT_DEAL_natural():
 
     # note this test carries another assumption that the deck size can go this low in size.
     state_in = GameState(GameStage.INIT_DEAL, parse_hand("KSQSJSAH"), 90, 10, None, None, None)
-    state_ex = GameState(GameStage.PLAYER_DONE, [], 90, 10, [parse_hand("AHJS")], 1, parse_hand("QSKS"))
+    state_ex = GameState(GameStage.ASK_INSURANCE, [], 90, 10, [parse_hand("AHJS")], 0, parse_hand("QSKS"))
 
     input_mock = InputMock([])
     driver.transition_logic(state_in, TestStrings(), input_mock.input, print_stub)
@@ -59,40 +59,40 @@ def test_transition_logic_INIT_DEAL_natural():
     # note that the player hand and deck are None because we don't care about their state in this test. If the original code tried to modify either, the test would likely fail, as it should. Anyway, their implementation doesn't matter in unit testing as long as they pass the tests, so I like the idea of None effectively encapsulating that.
     (
         # not insurable
-        GameState(GameStage.ASK_INSURANCE, None, 90, 10, None, None, parse_hand("2H2S")),
-        GameState(GameStage.ASK_SPLIT, None, 90, 10, None, None, parse_hand("2H2S")),
+        GameState(GameStage.ASK_INSURANCE, None, 90, 10, parse_hand("AS2C"), 0, parse_hand("2H2S")),
+        GameState(GameStage.ASK_SPLIT, None, 90, 10, parse_hand("AS2C"), 0, parse_hand("2H2S")),
         InputMock([]), # we are also testing if the input didn't prompt here. We can't take from empty queue.
     ),
     (
         # face down ace (even if it's actually blackjack). should be identical path to previous test.
-        GameState(GameStage.ASK_INSURANCE, None, 90, 10, None, None, helper_hands.hand_blackjack_ace_down()),
-        GameState(GameStage.ASK_SPLIT, None, 90, 10, None, None, helper_hands.hand_blackjack_ace_down()),
+        GameState(GameStage.ASK_INSURANCE, None, 90, 10, parse_hand("AS2C"), 0, helper_hands.hand_blackjack_ace_down()),
+        GameState(GameStage.ASK_SPLIT, None, 90, 10, parse_hand("AS2C"), 0, helper_hands.hand_blackjack_ace_down()),
         InputMock([]), # we are also testing if the input didn't prompt here. We can't take from empty queue.
     ),
     (
         # Insufficient funds. In insurance this would result from the player going all in.
         # this test ensures they aren't prompted for insurance at $0
-        GameState(GameStage.ASK_INSURANCE, None, 0, 10, None, None, helper_hands.hand_blackjack_ace_up()),
-        GameState(GameStage.ASK_SPLIT, None, 0, 10, None, None, helper_hands.hand_blackjack_ace_up()),
+        GameState(GameStage.ASK_INSURANCE, None, 0, 10, parse_hand("AS2C"), 0, helper_hands.hand_blackjack_ace_up()),
+        GameState(GameStage.ASK_SPLIT, None, 0, 10, parse_hand("AS2C"), 0, helper_hands.hand_blackjack_ace_up()),
         InputMock([]), # we are also testing if the input didn't prompt here. We can't take from empty queue.
     ),
     (
         # insurable (and it *is* blackjack) but player doesn't want it (they can't see that it's blackjack)
-        GameState(GameStage.ASK_INSURANCE, None, 90, 10, None, None, helper_hands.hand_blackjack_ace_up()),
-        GameState(GameStage.ASK_SPLIT, None, 90, 10, None, None, helper_hands.hand_blackjack_ace_up()),
+        GameState(GameStage.ASK_INSURANCE, None, 90, 10, parse_hand("AS2C"), 0, helper_hands.hand_blackjack_ace_up()),
+        GameState(GameStage.ASK_SPLIT, None, 90, 10, parse_hand("AS2C"), 0, helper_hands.hand_blackjack_ace_up()),
         InputMock(["no"]),
     ),
     (
         # insurance fails. see https://boardgames.stackexchange.com/a/27182
         # see also integration test where player loses insurance and plays on
-        GameState(GameStage.ASK_INSURANCE, None, 800, 200, None, None, parse_hand("AS2S")),
-        GameState(GameStage.ASK_SPLIT, None, 700, 200, None, None, parse_hand("AS2S")),
+        GameState(GameStage.ASK_INSURANCE, None, 800, 200, parse_hand("AS2C"), 0, parse_hand("AS2S")),
+        GameState(GameStage.ASK_SPLIT, None, 700, 200, parse_hand("AS2C"), 0, parse_hand("AS2S")),
         InputMock(["yes"]),
     ),
     (
         # insurance succeeds. see https://boardgames.stackexchange.com/a/27182
-        GameState(GameStage.ASK_INSURANCE, None, 800, 200, None, None, helper_hands.hand_blackjack_ace_up()),
-        GameState(GameStage.COMPLETE, None, 1000, 0, None, None, helper_hands.hand_blackjack_ace_up()),
+        GameState(GameStage.ASK_INSURANCE, None, 800, 200, parse_hand("AS2C"), 0, helper_hands.hand_blackjack_ace_up()),
+        GameState(GameStage.ASK_SPLIT, None, 1000, 200, parse_hand("AS2C"), 0, helper_hands.hand_blackjack_ace_up()),
         InputMock(["yes"]),
     )
 ])

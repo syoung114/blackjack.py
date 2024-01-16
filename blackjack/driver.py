@@ -70,22 +70,14 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
             state.player = [rules.init_hand(state.deck)]
             state.current_hand = 0
             state.dealer = rules.init_hand(state.deck)
+            state.stage = GameStage.ASK_INSURANCE
 
             writer(strings.show_player_hand(state))
             writer(strings.show_dealer_hand_down(state))
 
-            # default case for if we don't automatically Stay because player holding natural
-            state.stage = GameStage.ASK_INSURANCE
-
-            if rules.is_natural(state.player[state.current_hand]):
-                state.stage = GameStage.PLAYER_DONE # still chance of a push when dealer plays
-                state.current_hand += 1
-                # state.player.next()
-                writer(strings.show_player_blackjack(state))
-
         case GameStage.ASK_INSURANCE:
 
-            # default case for if we don't diverge because of successful insurance
+            # default case for if we don't diverge because of insurance or blackjacks
             state.stage = GameStage.ASK_SPLIT
 
             # check and handle insurance
@@ -103,11 +95,13 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
 
                 if insurance_success:
                     state.bank += payout
-                    state.bet = 0
-                    state.stage = GameStage.COMPLETE # this is intentionally not UPDATE_BANK. UPDATE_BANK compares player and dealer cards which insurance doesn't do.
                     writer(strings.show_insurance_success(state))
                 else:
                     writer(strings.show_insurance_fail(state))
+
+            if rules.is_natural(state.player[state.current_hand]):
+                state.stage = GameStage.PLAYER_DONE
+                state.current_hand += 1
 
         case GameStage.ASK_SPLIT:
             # note that although I put state.current_hand in the following, it means zero. It's for consistency and development flexibility.

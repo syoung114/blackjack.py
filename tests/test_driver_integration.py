@@ -132,6 +132,9 @@ def test_blackjack_win():
     assert input_mock.empty()
 
     transition_logic(state_in, TestStrings(), input_mock.input, print_stub)
+    assert state_in == GameState(GameStage.ASK_INSURANCE, parse_hand("KS2C"), 100, 100, [parse_hand("10CAD")], 0, parse_hand("10H6S"))
+
+    transition_logic(state_in, TestStrings(), input_mock.input, print_stub)
     assert state_in == GameState(GameStage.PLAYER_DONE, parse_hand("KS2C"), 100, 100, [parse_hand("10CAD")], 1, parse_hand("10H6S"))
 
     transition_logic(state_in, TestStrings(), input_mock.input, print_stub)
@@ -145,7 +148,7 @@ def test_blackjack_win():
 
 def test_blackjack_push():
     """
-    blackjack (push) flow from the beginning
+    blackjack (push) flow from the beginning. ace is down so no insurance.
     """
 
     deck_in = parse_hand("KS2CAS10HAD10C")
@@ -159,6 +162,10 @@ def test_blackjack_push():
     assert input_mock.empty()
 
     # init deal
+    transition_logic(state_in, TestStrings(), input_mock.input, print_stub)
+    assert state_in == GameState(GameStage.ASK_INSURANCE, parse_hand("KS2C"), 100, 100, [parse_hand("10CAD")], 0, parse_hand("10HAS"))
+
+    # ask about insurance. because ace down, no insurance.
     transition_logic(state_in, TestStrings(), input_mock.input, print_stub)
     assert state_in == GameState(GameStage.PLAYER_DONE, parse_hand("KS2C"), 100, 100, [parse_hand("10CAD")], 1, parse_hand("10HAS"))
 
@@ -198,13 +205,15 @@ def test_insurance_win():
 
     # ask insurance
     transition_logic(state_in, TestStrings(), input_mock.input, print_stub)
-    assert state_in == GameState(GameStage.COMPLETE, parse_hand("2H"), 200, 0, [parse_hand("2C2D")], 0, parse_hand("ACKD"))
+    assert state_in == GameState(GameStage.ASK_SPLIT, parse_hand("2H"), 200, 100, [parse_hand("2C2D")], 0, parse_hand("ACKD"))
+
+    # game continues along happy path
 
 
 
 
 def test_insurance_loss():
-    deck_in = parse_hand("2HKDQC2D2C")
+    deck_in = parse_hand("2H9DAC2D2C")
     state_in = GameState(GameStage.ASK_BET, deck_in, 200, None, None, None, None)
 
     input_mock = InputMock(["100", "yes"])
@@ -215,11 +224,11 @@ def test_insurance_loss():
 
     # init deal
     transition_logic(state_in, TestStrings(), input_mock.input, print_stub)
-    assert state_in == GameState(GameStage.ASK_INSURANCE, parse_hand("2H"), 100, 100, [parse_hand("2C2D")], 0, parse_hand("QCKD"))
+    assert state_in == GameState(GameStage.ASK_INSURANCE, parse_hand("2H"), 100, 100, [parse_hand("2C2D")], 0, parse_hand("AC9D"))
 
     # ask insurance
     transition_logic(state_in, TestStrings(), input_mock.input, print_stub)
-    assert state_in == GameState(GameStage.COMPLETE, parse_hand("2H"), 200, 0, [parse_hand("2C2D")], 0, parse_hand("QCKD"))
+    assert state_in == GameState(GameStage.ASK_SPLIT, parse_hand("2H"), 50, 100, [parse_hand("2C2D")], 0, parse_hand("AC9D"))
 
 
 
