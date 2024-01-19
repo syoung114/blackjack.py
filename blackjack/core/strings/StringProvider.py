@@ -15,9 +15,8 @@ class StringProvider(ABC):
 # ask methods -- these are prompts given when asking for input
 
     @staticmethod
-    @abstractmethod
     def ask_generic_fail(state : GameState):
-        pass
+        return ""
 
     @staticmethod
     @abstractmethod
@@ -35,24 +34,27 @@ class StringProvider(ABC):
     def ask_bet(state : GameState):
         pass
 
-    def ask_bet_fail(self, state : GameState):
-        return self.ask_generic_fail(state)
+    @staticmethod
+    def ask_bet_fail(state : GameState):
+        return StringProvider.ask_generic_fail(state)
 
     @staticmethod
     @abstractmethod
     def ask_insurance(state : GameState):
         pass
 
-    def ask_insurance_fail(self, state : GameState):
-        return self.ask_generic_fail(state)
+    @staticmethod
+    def ask_insurance_fail(state : GameState):
+        return StringProvider.ask_generic_fail(state)
 
     @staticmethod
     @abstractmethod
     def ask_split(state : GameState):
         pass
 
-    def ask_split_fail(self, state : GameState):
-        return self.ask_generic_fail(state)
+    @staticmethod
+    def ask_split_fail(state : GameState):
+        return StringProvider.ask_generic_fail(state)
 
     @staticmethod
     @abstractmethod
@@ -69,16 +71,18 @@ class StringProvider(ABC):
     def ask_hit_stay_double(state : GameState):
         pass
 
-    def ask_hit_stay_double_fail(self, state : GameState):
-        return self.ask_generic_fail(state)
+    @staticmethod
+    def ask_hit_stay_double_fail(state : GameState):
+        return StringProvider.ask_generic_fail(state)
 
     @staticmethod
     @abstractmethod
     def ask_hit_stay(state : GameState):
         pass
 
-    def ask_hit_stay_fail(self, state : GameState):
-        return self.ask_generic_fail(state)
+    @staticmethod
+    def ask_hit_stay_fail(state : GameState):
+        return StringProvider.ask_generic_fail(state)
 
 # input methods -- constrained texts that an input method must return
 
@@ -134,8 +138,9 @@ class StringProvider(ABC):
     def show_insurance_success(state : GameState):
         pass
 
-    def show_insurance_fail(self, state : GameState):
-        return self.ask_generic_fail(state)
+    @staticmethod
+    def show_insurance_fail(state : GameState):
+        return StringProvider.ask_generic_fail(state)
 
     @staticmethod
     @abstractmethod
@@ -157,6 +162,7 @@ class StringProvider(ABC):
     def show_shuffling(state : GameState):
         pass
 
-    def show_keyboard_interrupt(self, state : GameState):
+    @staticmethod
+    def show_keyboard_interrupt(state : GameState):
         # it's safe to assume that this will be the standard library default (as below) or ""
         return "KeyboardInterrupt"
