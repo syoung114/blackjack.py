@@ -2,10 +2,9 @@ from copy import deepcopy
 import pytest
 
 from blackjack.core import constants
-
-from blackjack.core.exception.StupidProgrammerException import StupidProgrammerException
-
 from blackjack.core import rules, cards
+from blackjack.core.PayoutOdds import PayoutOdds
+from blackjack.core.exception.StupidProgrammerException import StupidProgrammerException
 
 from tests.core import helper_hands
 from tests.core.fixtures_cards import *
@@ -129,33 +128,6 @@ def test_compare_hand_extreme_lt(fix_deck_alphabetical_52):
 #######################################################################################
 # payouts (these depend on or relate to hand_value)
 
-@pytest.mark.parametrize("payout,bet,ex", [
-    # baseline tests. nothing fancy.
-    (rules.PayoutOrd.ONE_ONE, 10, 10),
-    (rules.PayoutOrd.THREE_TWO, 10, 15),
-    (rules.PayoutOrd.TWO_ONE, 10, 20),
-    # another bet to imply it works for all bets
-    (rules.PayoutOrd.THREE_TWO, 300, 450),
-    # testing what the fractional property of three_two does to bet of value 1. The online blackjack I've played rounds down.
-    (rules.PayoutOrd.THREE_TWO, 1, 1),
-    # using a float anyway despite type annotations
-    (rules.PayoutOrd.THREE_TWO, 3.14, 4),
-    (rules.PayoutOrd.TWO_ONE, 3.14, 6.28)
-    # testing large int is irrelevant because bit sizes of ints are abstracted away in python
-])
-def test_payout(payout,bet,ex):
-    assert rules.payout(payout, bet) == ex
-
-@pytest.mark.parametrize("payout,bet,exception", [
-    (rules.PayoutOrd.ONE_ONE, -10, ValueError),
-    (None, 10, StupidProgrammerException),
-])
-def test_payout_exceptions(payout,bet,exception):
-    with pytest.raises(exception):
-        rules.payout(payout,bet)
-
-##### payout() above, bet_hand() below,
-
 @pytest.mark.parametrize("player,dealer,bet,ex", [
     # player and dealer busts, soft 17. note 9+8==17 (see definition of bust_2) which means the dealer isn't supposed to hit.
     (helper_hands.hand_bust_1(), helper_hands.hand_bust_2(), 10, 10),
@@ -197,8 +169,8 @@ def test_payout_exceptions(payout,bet,exception):
 
 ])
 def test_bet_hand_ONE_ONE(player,dealer,bet,ex):
-    # test cases about payout ord are redundant because that tests compare_hand not bet_hand.
-    assert rules.bet_hand(player,dealer,bet,win_odds=rules.PayoutOrd.ONE_ONE) == ex
+    # test cases about win_payout ord are redundant because that tests compare_hand not bet_hand.
+    assert rules.bet_hand(player,dealer,bet,win_odds=PayoutOdds.ONE_ONE) == ex
 
 @pytest.mark.parametrize("player,dealer,bet,ex", [
     # player and dealer busts, soft 17. note 9+8==17 (see definition of bust_2) which means the dealer isn't supposed to hit.
@@ -241,8 +213,8 @@ def test_bet_hand_ONE_ONE(player,dealer,bet,ex):
 
 ])
 def test_bet_hand_TWO_ONE(player,dealer,bet,ex):
-    # test cases about payout ord are redundant because that tests compare_hand not bet_hand.
-    assert rules.bet_hand(player,dealer,bet,win_odds=rules.PayoutOrd.TWO_ONE) == ex
+    # test cases about win_payout ord are redundant because that tests compare_hand not bet_hand.
+    assert rules.bet_hand(player,dealer,bet,win_odds=PayoutOdds.TWO_ONE) == ex
 
 ## def test_bet_hand_exception()
 

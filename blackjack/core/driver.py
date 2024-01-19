@@ -10,7 +10,7 @@ from dataclasses import fields
 from blackjack.core import constants, rules, cards, io
 
 from blackjack.core.state import GameState, GameStage
-from blackjack.core.rules import PayoutOrd
+from blackjack.core.PayoutOdds import PayoutOdds
 from blackjack.core.exception.StupidProgrammerException import StupidProgrammerException
 from blackjack.core.strings.StringProvider import StringProvider
 
@@ -88,13 +88,13 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
 
                 state.bank -= side_bet
 
-                insurance_success, payout = rules.insure(
+                insurance_success, win_payout = rules.insure(
                     state.dealer,
                     side_bet
                 )
 
                 if insurance_success:
-                    state.bank += payout
+                    state.bank += win_payout
                     writer(strings.show_insurance_success(state))
                 else:
                     writer(strings.show_insurance_fail(state))
@@ -188,7 +188,7 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
             # winning logic specifically for naturals has not yet been applied. When we transitioned from a blackjack, the code didn't compute winnings. We now compute winnings.
             if len(state.player) == 1 and rules.is_natural(state.player[0]):
                 # importantly notice that state.player[0]. Easy to miss if refactoring.
-                state.bank += rules.bet_hand(state.player[0], state.dealer, state.bet, win_odds=PayoutOrd.THREE_TWO)
+                state.bank += rules.bet_hand(state.player[0], state.dealer, state.bet, win_odds=PayoutOdds.THREE_TWO)
 
             else:
                 state.bank += rules.winnings(state.player, state.dealer, state.bet)

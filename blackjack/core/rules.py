@@ -2,23 +2,19 @@ import functools
 
 from typing import List
 from enum import Enum
-from math import floor
 
 from blackjack.core import constants
 from blackjack.core import cards
 
+from blackjack.core.PayoutOdds import PayoutOdds
 from blackjack.core.cards import Hand, Deck, Rank
+from blackjack.core.casino import HouseRules, TraditionalRules
 from blackjack.core.exception.StupidProgrammerException import StupidProgrammerException
 
 class Ordinal(Enum):
     LT = -1
     EQ = 0
     GT = 1
-
-class PayoutOrd(Enum):
-    ONE_ONE = 1,
-    THREE_TWO = 2,
-    TWO_ONE = 3
 
 # /core definitions
 #######################################################################################
@@ -93,34 +89,14 @@ def compare_hand(left_hand : Hand, right_hand : Hand) -> Ordinal:
         hand_value(right_hand)
     )
 
-def payout(ord : PayoutOrd, bet : int) -> int:
-    """
-    Returns positive winnings relative to the bet, according to the payout.
-
-    Complexity: O(1)
-    """
-    if bet < 0:
-        # this is a defensive measure to prevent a pre-exsting bug from spiraling into something worse
-        raise ValueError(f"negative bet in rules.payout(): {bet}")
-
-    match ord:
-        case PayoutOrd.ONE_ONE:
-            return bet
-        case PayoutOrd.THREE_TWO:
-            return floor(1.5 * bet) # them casinos wouldn't generously let you round up!
-        case PayoutOrd.TWO_ONE:
-            return 2 * bet
-        case _:
-            raise StupidProgrammerException("Missing payout pattern match in blackjack.payout()")
-
-def bet_hand(player : Hand, dealer : Hand, bet : int, win_odds : PayoutOrd=PayoutOrd.ONE_ONE) -> int:
+def bet_hand(player : Hand, dealer : Hand, bet : int, win_odds : PayoutOdds=PayoutOdds.ONE_ONE, house : HouseRules=TraditionalRules) -> int:
     """
     Given two hands, modifies a bet depending on the value comparison.
 
     Complexity: O(n) for number of cards
     """
 
-    # As you read this function you'll notice an unintuitive call to payout(). That function computes the winnings on top of the original bet. This function encompasses the entire bet logic. A match function within a match function might seem confusing without this context so figured I'd mention it. Don't consider refactoring because the matches aren't the same.
+    # As you read this function you'll notice an unintuitive call to win_payout(). That function computes the winnings on top of the original bet. This function encompasses the entire bet logic. A match function within a match function might seem confusing without this context so figured I'd mention it. Don't consider refactoring because the matches aren't the same.
 
     player_bust = is_bust(player)
     dealer_bust = is_bust(dealer)
@@ -132,7 +108,7 @@ def bet_hand(player : Hand, dealer : Hand, bet : int, win_odds : PayoutOrd=Payou
         return 0
 
     elif not player_bust and dealer_bust:
-        return bet + payout(win_odds, bet)
+        return bet + house.win_payout(win_odds, bet)
 
     result = compare_hand(player, dealer)
     match result:
@@ -141,7 +117,7 @@ def bet_hand(player : Hand, dealer : Hand, bet : int, win_odds : PayoutOrd=Payou
         case Ordinal.LT:
             return 0
         case Ordinal.GT:
-            return bet + payout(win_odds, bet)
+            return bet + house.win_payout(win_odds, bet)
         case _:
             raise StupidProgrammerException("Missing pattern match in blackjack.bet_hand()")
 
@@ -196,9 +172,9 @@ def insurance_make_side_bet(bet) -> int:
     # TODO allow flexible adjusting depending on casino rules
     return round(bet / 2)
 
-def insure(dealer : Hand, side_bet : int):
+def insure(dealer : Hand, side_bet : int, house : HouseRules=TraditionalRules):
     if is_natural(dealer): # whereas a previous check might have observed just ace, this function observes entire hand
-        return True, side_bet + payout(PayoutOrd.TWO_ONE, side_bet)
+        return True, side_bet + house.win_payout(PayoutOdds.TWO_ONE, side_bet)
     else:
         return False, 0
 
