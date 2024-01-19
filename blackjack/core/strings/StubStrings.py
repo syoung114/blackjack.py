@@ -1,10 +1,10 @@
 from functools import singledispatch
-from .StringProvider import StringProvider
+from .OutputProvider import OutputProvider
 
 from blackjack.core.state import GameState, Hand
 from blackjack.core.rules import hand_value
 
-class StubStrings(StringProvider):
+class StubStrings(OutputProvider[str]):
     """
     Not pretty but usable contextual strings.
     """

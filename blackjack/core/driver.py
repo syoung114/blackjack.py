@@ -12,9 +12,9 @@ from blackjack.core import constants, rules, cards, io
 from blackjack.core.state import GameState, GameStage
 from blackjack.core.PayoutOdds import PayoutOdds
 from blackjack.core.exception.StupidProgrammerException import StupidProgrammerException
-from blackjack.core.strings.StringProvider import StringProvider
+from blackjack.core.strings.OutputProvider import OutputProvider
 
-def transition_logic(state : GameState, strings : StringProvider, reader : Callable[..., str], writer : Callable[[str], None]):
+def transition_logic(state : GameState, strings : OutputProvider, reader : Callable[..., str], writer : Callable[[str], None]):
     """
     Given a GameStage and related state, returns the updated state according to blackjack logic and user input. Implemented as a state machine/pattern matching.
 
@@ -212,7 +212,7 @@ def transition_logic(state : GameState, strings : StringProvider, reader : Calla
 
 def driver_io(
     ext_stop_pred : threading.Event,
-    strings : StringProvider,
+    strings : OutputProvider,
     reader : Callable[..., str] = input,
     writer : Callable[[str], None] = print
 ):

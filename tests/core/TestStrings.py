@@ -1,7 +1,7 @@
-from blackjack.core.strings.StringProvider import StringProvider
+from blackjack.core.strings.OutputProvider import OutputProvider
 from blackjack.core.state import GameState, Hand
 
-class TestStrings(StringProvider):
+class TestStrings(OutputProvider[str]):
     """
     Empty strings for when printing is irrelevant, like testing.
     """
