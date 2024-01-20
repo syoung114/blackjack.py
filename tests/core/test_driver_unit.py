@@ -9,9 +9,13 @@ from blackjack.core import driver
 from blackjack.core.state import GameStage, GameState
 from blackjack.core.cards import parse_hand
 
-from tests.core.test_io import PrintMock, InputMock, print_stub
+# we are testing on these two.
+# We don't need another implementation of InputProvder because this one works fine.
+from blackjack.core.io.BareInput import BareInput
+from tests.core.TestOutput import TestOutput
+
+from tests.core.test_io import InputMock, print_stub
 from tests.core.fixtures_cards import fix_deck_alphabetical_52
-from tests.core.TestStrings import TestStrings
 from tests.core import helper_hands
 
 def test_transition_logic_ASK_BET(fix_deck_alphabetical_52):
@@ -21,7 +25,7 @@ def test_transition_logic_ASK_BET(fix_deck_alphabetical_52):
 
     input_mock = InputMock(["10"])
 
-    driver.transition_logic(state_in, TestStrings, input_mock.input, print_stub)
+    driver.transition_logic(state_in, BareInput, TestOutput, input_mock.input, print_stub)
 
     assert state_in == state_ex
 
@@ -36,7 +40,7 @@ def test_transition_logic_INIT_DEAL_non_natural(fix_deck_alphabetical_52):
     state_ex = GameState(GameStage.ASK_INSURANCE, original_deck[:-4], 90, 10, [parse_hand("KSQS")], 0, parse_hand("JS10S"))
 
     input_mock = InputMock([])
-    driver.transition_logic(state_in, TestStrings, input_mock.input, print_stub)
+    driver.transition_logic(state_in, BareInput, TestOutput, input_mock.input, print_stub)
 
     assert state_in == state_ex
 
@@ -48,7 +52,7 @@ def test_transition_logic_INIT_DEAL_natural():
     state_ex = GameState(GameStage.ASK_INSURANCE, [], 90, 10, [parse_hand("AHJS")], 0, parse_hand("QSKS"))
 
     input_mock = InputMock([])
-    driver.transition_logic(state_in, TestStrings, input_mock.input, print_stub)
+    driver.transition_logic(state_in, BareInput, TestOutput, input_mock.input, print_stub)
 
     assert state_in == state_ex
 
@@ -97,7 +101,7 @@ def test_transition_logic_INIT_DEAL_natural():
     )
 ])
 def test_transition_logic_ASK_INSURANCE(state_in, state_ex, input_mock):
-    driver.transition_logic(state_in, TestStrings, input_mock.input, print_stub)
+    driver.transition_logic(state_in, BareInput, TestOutput, input_mock.input, print_stub)
     assert state_in == state_ex
     assert input_mock.empty()
 
@@ -131,7 +135,7 @@ def test_transition_logic_ASK_INSURANCE(state_in, state_ex, input_mock):
 
 ])
 def test_transition_logic_ASK_SPLIT(state_in,state_ex,input_mock):
-    driver.transition_logic(state_in, TestStrings, input_mock.input, print_stub)
+    driver.transition_logic(state_in, BareInput, TestOutput, input_mock.input, print_stub)
     assert state_in == state_ex
     assert input_mock.empty()
 
@@ -157,7 +161,7 @@ def test_transition_logic_ASK_SPLIT(state_in,state_ex,input_mock):
 ])
 def test_transition_logic_PLAYER_ACTIONS_single_hit(state_in,state_ex):
     mock_input = InputMock(["hit"])
-    driver.transition_logic(state_in, TestStrings, mock_input.input, print_stub)
+    driver.transition_logic(state_in, BareInput, TestOutput, mock_input.input, print_stub)
     assert state_in == state_ex
     assert mock_input.empty()
 
@@ -187,7 +191,7 @@ def test_transition_logic_PLAYER_ACTIONS_single_hit(state_in,state_ex):
 ])
 def test_transition_logic_PLAYER_ACTIONS_single_double(state_in,state_ex):
     mock_input = InputMock(["double"])
-    driver.transition_logic(state_in, TestStrings, mock_input.input, print_stub)
+    driver.transition_logic(state_in, BareInput, TestOutput, mock_input.input, print_stub)
     assert state_in == state_ex
     assert mock_input.empty()
 
@@ -198,7 +202,7 @@ def test_transition_logic_PLAYER_ACTIONS_single_stay():
     state_in = GameState(GameStage.PLAYER_ACTIONS, None, None, None, [helper_hands.hand_17_len_3()], 0, None)
     state_out = GameState(GameStage.PLAYER_DONE, None, None, None, [helper_hands.hand_17_len_3()], 1, None)
 
-    driver.transition_logic(state_in, TestStrings, InputMock(["stay"]).input, print_stub)
+    driver.transition_logic(state_in, BareInput, TestOutput, InputMock(["stay"]).input, print_stub)
 
     assert state_in == state_out
 
@@ -209,7 +213,7 @@ def test_transition_logic_PLAYER_DONE(fix_deck_alphabetical_52):
 
     state_in = GameState(GameStage.PLAYER_DONE, fix_deck_alphabetical_52, None, None, None, None, helper_hands.hand_2C2D())
 
-    driver.transition_logic(state_in, TestStrings, InputMock([]), print_stub)
+    driver.transition_logic(state_in, BareInput, TestOutput, InputMock([]), print_stub)
 
     assert state_in.stage == GameStage.UPDATE_BANK
 
@@ -264,8 +268,8 @@ def test_transition_logic_PLAYER_DONE(fix_deck_alphabetical_52):
 ])
 def test_transition_logic_UPDATE_BANK(state_in,state_ex):
     input_mock = InputMock([])
-    driver.transition_logic(state_in,TestStrings,input_mock.input,print_stub)
-    assert state_in==state_ex
+    driver.transition_logic(state_in, BareInput, TestOutput, input_mock.input, print_stub)
+    assert state_in == state_ex
     assert input_mock.empty()
 
 
@@ -279,6 +283,6 @@ def test_transition_logic_COMPLETE(fix_deck_alphabetical_52):
     state_in = GameState(GameStage.COMPLETE, used_deck, 456, 123, [helper_hands.hand_18_len_3()], 1, helper_hands.hand_17_len_2())
     state_ex = GameState(GameStage.ASK_BET, used_deck, 456, None, None, None, None)
 
-    driver.transition_logic(state_in, TestStrings, InputMock([]), print_stub)
+    driver.transition_logic(state_in, BareInput, TestOutput, InputMock([]), print_stub)
 
     assert state_in == state_ex

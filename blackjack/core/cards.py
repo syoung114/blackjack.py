@@ -115,7 +115,6 @@ def parse_hand(hs : str, fmt : str=r'([2-9]|10|J|Q|K|A)([CDHS])') -> Hand:
         'Q' : Rank.QUEEN,
         'K' : Rank.KING,
     }
-    # TODO this is bugged. It doesn't convert the strings to the enum literal
     matches = re.findall(fmt, hs)
     return [ Card(rank_map[r], suit_map[s]) for r,s in matches ]
 

@@ -126,6 +126,18 @@ def test_compare_hand_extreme_lt(fix_deck_alphabetical_52):
 
 # /hand_value
 #######################################################################################
+# other hand methods
+
+@pytest.mark.parametrize("hand,ex", [
+    (cards.parse_hand("ACAD"), True),
+    (cards.parse_hand("AC2D"), False),
+    (helper_hands.hand_2C2D(), True)
+])
+def test_is_hard_hand(hand,ex):
+    assert rules.is_hard_hand(hand) == ex
+
+# /other hand methods
+#######################################################################################
 # payouts (these depend on or relate to hand_value)
 
 @pytest.mark.parametrize("player,dealer,bet,ex", [

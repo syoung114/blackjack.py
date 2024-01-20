@@ -24,3 +24,8 @@ class GameState:
     player : List[Hand]
     current_hand : int
     dealer : Hand
+
+class PlayerAction(Enum):
+    DOUBLE = 2
+    HIT = 1
+    STAY = 0

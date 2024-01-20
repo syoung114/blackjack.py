@@ -1,5 +1,3 @@
-from enum import Enum
-from functools import partial
 import threading
 import time
 import random
@@ -7,14 +5,17 @@ import random
 from typing import Callable
 from dataclasses import fields
 
-from blackjack.core import constants, rules, cards, io
-
-from blackjack.core.state import GameState, GameStage
+from blackjack.core import constants, rules, cards
 from blackjack.core.PayoutOdds import PayoutOdds
-from blackjack.core.exception.StupidProgrammerException import StupidProgrammerException
-from blackjack.core.strings.OutputProvider import OutputProvider
 
-def transition_logic(state : GameState, strings : OutputProvider, reader : Callable[..., str], writer : Callable[[str], None]):
+from blackjack.core.exception.StupidProgrammerException import StupidProgrammerException
+
+from blackjack.core.io.InputProvider import InputProvider
+from blackjack.core.io.OutputProvider import OutputProvider
+
+from blackjack.core.state import GameState, GameStage, PlayerAction
+
+def transition_logic(state : GameState, inputs : InputProvider, strings : OutputProvider, reader : Callable[..., str], writer : Callable[[str], None]):
     """
     Given a GameStage and related state, returns the updated state according to blackjack logic and user input. Implemented as a state machine/pattern matching.
 
@@ -22,46 +23,9 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
 
     @arg state A GameState representing a snapshot of the working state
     """
-    class PlayerAction(Enum):
-        DOUBLE = 2
-        HIT = 1
-        STAY = 0
-
-    def ask_bet(bank) -> int:
-        bet_constraint = io.Constraint().require(int).within(constants.MIN_BET, bank)
-        bet = io.input_require(bet_constraint, strings.ask_bet(state), strings.ask_bet_fail(state), reader, writer)
-        return bet
-
-    def ask_hit() -> bool:
-        return io.ask_binary(strings.input_hit(), strings.input_stay(), strings.ask_hit_stay(state), strings.ask_hit_stay_fail(state), reader, writer)
-
-    def ask_hit_stay_double() -> PlayerAction:
-        constraint = io.Constraint().equalsAny(strings.input_hit(), strings.input_stay(), strings.input_double())
-        user = io.input_require(constraint, strings.ask_hit_stay_double(state), strings.ask_hit_stay_double_fail(state), reader, writer)
-
-        # I just realized that pattern matching is just a partial equality function...
-        # The below also isn't just me showing off. I match I wrote didn't work because of some error about "expecting a class". It probably had to do with calling functions in the match case.
-        user_match = partial(lambda a,b: a==b, user)
-        if user_match(strings.input_double()):
-            return PlayerAction.DOUBLE
-
-        if user_match(strings.input_hit()):
-            return PlayerAction.HIT
-
-        if user_match(strings.input_stay()):
-            return PlayerAction.STAY
-
-        raise StupidProgrammerException("missing case in ask_hit_stay_double")
-
-    def ask_want_split() -> bool:
-        return io.ask_binary(strings.input_yes(), strings.input_no(), strings.ask_split(state), strings.ask_split_fail(state), reader, writer)
-
-    def ask_want_insurance() -> bool:
-        return io.ask_binary(strings.input_yes(), strings.input_no(), strings.ask_insurance(state), strings.ask_insurance_fail(state), reader, writer)
-
     match state.stage:
         case GameStage.ASK_BET:
-            state.bet = ask_bet(state.bank)
+            state.bet = inputs.input_bet(state, reader, writer)
             state.bank -= state.bet
             state.stage = GameStage.INIT_DEAL
 
@@ -72,8 +36,8 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
             state.dealer = rules.init_hand(state.deck)
             state.stage = GameStage.ASK_INSURANCE
 
-            writer(strings.show_player_hand(state))
-            writer(strings.show_dealer_hand_down(state))
+            strings.show_player_hand(state, writer)
+            strings.show_dealer_hand_down(state, writer)
 
         case GameStage.ASK_INSURANCE:
 
@@ -84,7 +48,7 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
             # I'm partial to walrus operator but its lazy nature is very useful here.
             if (rules.is_insurable(state.dealer) and
                 0 <= state.bank - (side_bet := rules.insurance_make_side_bet(state.bet)) and
-                ask_want_insurance()):
+                inputs.input_want_insurance(state, reader, writer)):
 
                 state.bank -= side_bet
 
@@ -95,9 +59,9 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
 
                 if insurance_success:
                     state.bank += win_payout
-                    writer(strings.show_insurance_success(state))
+                    strings.show_insurance_success(state, writer)
                 else:
-                    writer(strings.show_insurance_fail(state))
+                    strings.show_insurance_fail(state, writer)
 
             if rules.is_natural(state.player[state.current_hand]):
                 state.stage = GameStage.PLAYER_DONE
@@ -107,7 +71,7 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
             # note that although I put state.current_hand in the following, it means zero. It's for consistency and development flexibility.
             if (rules.can_split(state.player[state.current_hand]) and
                 state.bank - state.bet >= 0 and
-                ask_want_split()):
+                inputs.input_want_split(state, reader, writer)):
 
                 # rules.init_split :: [[Hand]] -> [[Hand], [Hand]]
                 # because 0 -> 0 state.current_hand doesn't change
@@ -117,7 +81,7 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
                 state.bank -= state.bet
                 state.bet *= 2
 
-                writer(strings.show_player_hand(state))
+                strings.show_player_hand(state, writer)
 
             else:
                 state.stage=GameStage.PLAYER_ACTIONS
@@ -127,13 +91,13 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
             # for control flow of stays and busts
             hand_completed = False
 
-            # player decision
+            # player decision. Using None because we can tell quickly when something's wrong
             hit_stay_double = None
 
-            # check if double is possible by asking if initial hand
+            # check if double is possible by asking if initial hand (also sufficient funds to make the double)
             if len(state.player[state.current_hand]) == constants.INITIAL_HAND_LEN and state.bank - state.bet >= 0:
 
-                hit_stay_double = ask_hit_stay_double()
+                hit_stay_double = inputs.input_hit_stay_double(state, reader, writer)
                 if hit_stay_double == PlayerAction.DOUBLE:
                     state.bank -= state.bet
                     state.bet *= 2
@@ -141,9 +105,10 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
 
             # this hand isn't initial
             else:
-                hit_stay_double = PlayerAction.HIT if ask_hit() else PlayerAction.STAY
+                hit_stay_double = inputs.input_hit(state, reader, writer)
 
-            # handle hits and doubles. in the case of doubles, the following logic is the same but hand_completed is overridden to be True, because the next card is their last regardless of result.
+            # handle hits and doubles.
+            # in the case of doubles, the following logic is the same but hand_completed is overridden to be True, because the next card is their last regardless of result.
             if hit_stay_double == PlayerAction.HIT or hit_stay_double == PlayerAction.DOUBLE:
                 cards.take_card(state.player[state.current_hand], state.deck)
 
@@ -152,15 +117,15 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
 
                 # busting won't happen on first deal but remember this state is for later hit/stay actions, unlike INIT_DEAL. 
                 if rules.is_bust(hand_value):
-                    writer(strings.show_bust(state.player[state.current_hand]))
+                    strings.show_player_bust(state, writer)
                     hand_completed = True
 
                 elif rules.is_max(hand_value):
-                    writer(strings.show_max_hand(state))
+                    strings.show_max_hand(state, writer)
                     hand_completed = True
 
                 else:
-                    writer(strings.show_player_hand(state.player[state.current_hand]))
+                    strings.show_player_hand(state, writer)
 
             elif hit_stay_double == PlayerAction.STAY:
                 hand_completed = True
@@ -179,9 +144,9 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
 
             # if the dealer busted then report it.
             if rules.is_bust(state.dealer):
-                writer(strings.show_bust(state.dealer))
+                strings.show_dealer_bust(state, writer)
             else:
-                writer(strings.show_dealer_hand_up(state))
+                strings.show_dealer_hand_up(state, writer)
 
         case GameStage.UPDATE_BANK:
 
@@ -195,7 +160,7 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
 
             state.bet = 0
             state.stage = GameStage.COMPLETE
-            writer(strings.show_bank(state))
+            strings.show_bank(state, writer)
 
         case GameStage.COMPLETE:
 
@@ -212,9 +177,10 @@ def transition_logic(state : GameState, strings : OutputProvider, reader : Calla
 
 def driver_io(
     ext_stop_pred : threading.Event,
+    inputs : InputProvider,
     strings : OutputProvider,
-    reader : Callable[..., str] = input,
-    writer : Callable[[str], None] = print
+    reader : Callable[..., str]=input,
+    writer : Callable[[str], None]=print,
 ):
     """
     Sort of like main() or a rules.loop. It's the highest level driver of program logic and it creates the I/O side effects concerning user input and display.
@@ -229,17 +195,21 @@ def driver_io(
         return cards.make_deck_unordered(seed) 
 
     try:
-        def ask_bank() -> int:
-            constraint = io.Constraint().require(int).at_least(constants.MIN_BET)
-            return io.input_require(constraint, strings.ask_bank(), strings.ask_bank_fail(), reader, writer)
-        init_state = GameState(GameStage.ASK_BET, make_deck_epoch(), ask_bank(), None, None, None, None)
+        state = GameState(GameStage.ASK_BET, make_deck_epoch(), inputs.input_bank(reader, writer), None, None, None, None)
+        completed_rounds = 0
 
         while not ext_stop_pred.is_set():
-            if len(init_state.deck) <= 13: # this is arbitrary for the moment while other details are realized.
-                init_state.deck = make_deck_epoch()
-                writer(strings.show_shuffling(init_state))
-            writer(str(init_state.stage))
-            transition_logic(init_state, strings, reader, writer)
+            if state.stage == GameStage.COMPLETE: 
+                completed_rounds += 1
+
+            if completed_rounds >= 3: # I know this is magic number. don't care for now.
+                completed_rounds = 0
+                state.deck = make_deck_epoch()
+
+                strings.show_shuffling(state, writer)
+            #writer(str(state.stage))
+
+            transition_logic(state, inputs, strings, reader, writer)
 
     except KeyboardInterrupt:
-        writer(strings.show_keyboard_interrupt(init_state))
+        strings.show_keyboard_interrupt(state, writer)

@@ -17,8 +17,8 @@ class Ordinal(Enum):
     GT = 1
 
 # /core definitions
-#######################################################################################
-# init hand
+######################################################################################
+# hands
 
 def init_hand(deck : Deck) -> Hand:
     """
@@ -36,7 +36,25 @@ def init_hand(deck : Deck) -> Hand:
 
     return h
 
-# /init hand
+def is_hard_hand(hand : Hand) -> bool:
+    """
+    Determines whether a hand is 'hard' or 'soft' according to blackjack language.
+
+    Complexity: O(n)
+    """
+    aces_count = 0
+    for card in hand:
+        if card.rank == Rank.ACE:
+            aces_count += 1
+            if aces_count > 1:
+                return True
+
+    if aces_count == 1:
+        return False
+
+    return True
+
+# /hands
 #######################################################################################
 # payouts
 

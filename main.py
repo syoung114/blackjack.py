@@ -1,8 +1,12 @@
+from threading import Event
+
+from blackjack.core import driver
+from blackjack.core.io.BareInput import BareInput
+from blackjack.core.io.BareOutput import BareOutput
+
+
 def main():
-    from threading import Event
-    from blackjack.core.strings.StubStrings import StubStrings
-    from blackjack.core import driver
-    driver.driver_io(Event(), StubStrings)
+    driver.driver_io(Event(), BareInput, BareOutput)
 
 if __name__ == "__main__":
     #import argparse

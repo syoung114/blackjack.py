@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Callable, List
 import queue
 
-from blackjack.core import io
+from blackjack.core.io import io
 
 from tests.core.mocks_io import IOQueue, PrintMock, InputMock, print_stub
 
@@ -25,7 +25,7 @@ def test_input_require_int():
 
     # do the thing. this will create side effects which the mocks will collect.
     result = io.input_require(
-        int,
+        io.Constraint(int),
         InputRequireString.PROMPT.value,
         InputRequireString.FAIL.value,
         input_mock.input,
@@ -54,7 +54,7 @@ def test_input_require_int_within_invalid():
             self.callback()
 
     for i in [0, 98, 200, 1000]:
-        constraint = io.Constraint().require(int).within(99, 199) # that range is arbitrary.
+        constraint = io.Constraint(int).within(99, 199) # that range is arbitrary.
 
         input_mock = InputMock([str(i)])
 
@@ -88,7 +88,7 @@ def test_input_require_int_within_valid():
 
     for ex in [99, 100, 150, 198, 199]:
 
-        constraint = io.Constraint().require(int).within(99, 199) # that range is arbitrary.
+        constraint = io.Constraint(int).within(99, 199) # that range is arbitrary.
 
         input_mock = InputMock([str(ex)])
 
